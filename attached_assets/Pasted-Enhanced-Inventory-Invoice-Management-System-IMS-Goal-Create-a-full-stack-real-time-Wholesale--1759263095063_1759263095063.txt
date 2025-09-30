@@ -1,0 +1,276 @@
+Enhanced Inventory & Invoice Management System (IMS)
+Goal: Create a full-stack, real-time Wholesale Mobile Shop Manager application that replicates the core functionality of the provided IMS but utilizes Supabase for database, and real-time capabilities. The application must feature a modern, responsive, and professional UI.
+
+1. Technical Stack Requirements
+Frontend Framework: React or Next.js
+
+Styling: Tailwind CSS (Modern, professional, fully responsive design).
+
+Database: Supabase
+
+2. Data Model & Supabase Schema (Mandatory Tables)
+Define the following three (3) main tables with relationships in Supabase PostgreSQL:
+
+A. inventory Table
+Column Name
+
+Data Type
+
+Constraint
+
+Description
+
+id
+
+UUID
+
+Primary Key
+
+Unique Item Identifier (Supabase default)
+
+name
+
+TEXT
+
+NOT NULL
+
+Item name (e.g., "iPhone 15 Pro Max 256GB")
+
+sku
+
+TEXT
+
+UNIQUE
+
+Stock Keeping Unit
+
+cost_price
+
+NUMERIC
+
+NOT NULL
+
+Wholesale cost price (in USD or local currency)
+
+stock_quantity
+
+INTEGER
+
+NOT NULL
+
+Current physical stock count
+
+reorder_level
+
+INTEGER
+
+NOT NULL
+
+Threshold to flag item as "Low Stock" (Default: 10)
+
+user_id
+
+TEXT
+
+Index
+
+ID of the user who owns the item data.
+
+B. customers Table
+Column Name
+
+Data Type
+
+Constraint
+
+Description
+
+id
+
+UUID
+
+Primary Key
+
+Unique Customer Identifier
+
+name
+
+TEXT
+
+NOT NULL
+
+Customer's name (e.g., "John Doe")
+
+phone
+
+TEXT
+
+UNIQUE
+
+Customer's contact number
+
+address
+
+TEXT
+
+
+
+Customer's physical address
+
+current_due
+
+NUMERIC
+
+Default: 0.00
+
+Aggregate of outstanding balance across all invoices.
+
+C. invoices Table
+Column Name
+
+Data Type
+
+Constraint
+
+Description
+
+id
+
+UUID
+
+Primary Key
+
+Unique Invoice ID
+
+invoice_number
+
+TEXT
+
+UNIQUE, NOT NULL
+
+Human-readable sequential number (e.g., INV-00001)
+
+customer_id
+
+UUID
+
+FK to customers
+
+Link to the customer table.
+
+date
+
+TIMESTAMPZ
+
+NOT NULL
+
+Date and time the invoice was created.
+
+line_items
+
+JSONB
+
+NOT NULL
+
+Array of item objects sold (See structure below).
+
+total_sales
+
+NUMERIC
+
+NOT NULL
+
+Sum of all line item sales prices.
+
+total_cost
+
+NUMERIC
+
+NOT NULL
+
+Sum of all line item cost prices (for profit calculation).
+
+due_balance_before
+
+NUMERIC
+
+
+
+Previous balance manually entered/pulled from customer.current_due.
+
+cash_paid
+
+NUMERIC
+
+NOT NULL
+
+Amount paid in cash/transfer during this transaction.
+
+remaining_due
+
+NUMERIC
+
+NOT NULL
+
+Total Payable - Cash Paid.
+
+status
+
+TEXT
+
+NOT NULL
+
+Enum: 'PENDING', 'PAID', 'CANCELLED' (Default: 'PENDING')
+
+Line Item Structure (invoices.line_items - JSONB Array):
+Each object in this array must contain: { itemId: UUID, name: string, quantity: number, salePrice: number, costPrice: number }
+
+3. Functional Requirements
+3.2. Inventory Management Module (CRUD)
+Display: Show inventory in a clean, searchable, and sortable table format.
+
+Search/Filter: Allow filtering by name or sku.
+
+CRUD: Implement functions to add, edit, and delete items. Ensure editing an item does not affect historical invoices.
+
+3.3. Invoice Generation Module
+New Invoice: Generate a unique, sequential invoice_number automatically upon creation.
+
+Customer Selection: Allow searching for an existing customer by name/phone. If not found, prompt to create a new one instantly.
+
+Item Autocomplete: As the user types in the item input, autocomplete suggestions must pop up based on the inventory.name.
+
+Dynamic Calculation: Calculate Total Sales, Total Cost, Total Payable, Cash Paid, and Remaining Due in real-time.
+
+Stock Check: Prevent saving an invoice if the total quantity of any item exceeds its stock_quantity.
+
+Transaction Logic (Critical): When an invoice is saved:
+
+Create a new record in the invoices table.
+
+Update the inventory table: Deduct the sold quantity from each line item's stock_quantity.
+
+Update the customers table: Update the current_due balance for the customer.
+
+3.4. Reporting & Dashboard
+Real-time Metrics: Display key metrics using onSnapshot (or Supabase Realtime equivalent) on a main dashboard card:
+
+Low Stock Items: A list of items where stock_quantity < reorder_level.
+
+Today's Sales (Total Sales)
+
+Today's Profit (Total Sales - Total Cost)
+
+Total Outstanding Due (Sum of remaining_due for all 'PENDING' invoices).
+
+4. UI/UX Requirements
+Layout: A single-page application with a clear sidebar or tab navigation (Inventory, New Invoice, Dashboard).
+
+Aesthetics: Use a modern color palette (e.g., primary blue/indigo and light gray backgrounds). Use lucide-react icons. All elements must have rounded corners and subtle shadow/elevation.
+
+Responsiveness: Must look excellent and be fully functional on mobile devices (use Tailwind's responsive utilities like sm:, md:, lg:).
+
+Error Handling: Use custom toast or message boxes for success/error notifications (e.g., "Invoice Saved," "Insufficient Stock"). DO NOT USE alert() or confirm().
+
+5. Final Output Constraint
+Single File: All HTML, CSS (via Tailwind), React components, state logic, and Supabase interaction code MUST be contained within a single App.jsx file.

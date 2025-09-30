@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wholesale Mobile Shop Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Changed font to Poppins */
+        body { font-family: 'Poppins', sans-serif; background-color: #f0f4f8; }
+        
+        /* Enhanced Invoice Paper Style - Clean and Elevated */
+        .invoice-paper {
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Softer, more elevated shadow */
+            border: 1px solid #e5e7eb; /* Subtle border */
+        }
+        
+        /* Style for read-only inputs */
+        input:read-only, input[readonly] {
+            background-color: #f9fafb !important;
+            border-color: #e5e7eb !important;
+            cursor: default !important;
+        }
+
+        /* Custom print media queries to ensure good printed output */
+        @media print {
+            body { margin: 0; padding: 0; background: white; }
+            #controls, .footer-controls, .print\:hidden, .save-button-container { display: none !important; }
+            .invoice-paper { box-shadow: none; border: none; }
+            /* Force inputs and borders to appear when printing */
+            input, select, textarea { 
+                border: 1px solid #ccc !important;
+                background-color: transparent !important;
+                -webkit-print-color-adjust: exact; 
+            }
+            /* Ensure the item description input border is visible for printed documents */
+            .item-description-input, .qty-input, .price-input, .lprs-input {
+                border-color: #ccc !important; 
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="messageBox" class="fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl text-white font-semibold transition-opacity duration-300 opacity-0 hidden" role="alert"></div>
+
+    <div id="controls" class="flex justify-center gap-3 mb-6 print:hidden">
+        <button onclick="generateNewInvoice()" class="flex items-center px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition transform hover:scale-[1.02]">
+            <i data-lucide="file-plus" class="w-5 h-5 mr-2"></i> New Invoice
+        </button>
+        
+        <button onclick="loadInventoryManager()" class="flex items-center px-5 py-2 bg-emerald-600 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-700 transition transform hover:scale-[1.02]">
+            <i data-lucide="boxes" class="w-5 h-5 mr-2"></i> Inventory Manager
+        </button>
+
+        <button onclick="loadReportsDashboard()" class="flex items-center px-5 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition transform hover:scale-[1.02]">
+            <i data-lucide="pie-chart" class="w-5 h-5 mr-2"></i> Reports Dashboard
+        </button>
+        
+        <button onclick="window.print()" class="flex items-center px-5 py-2 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition transform hover:scale-[1.02]">
+            <i data-lucide="printer" class="w-5 h-5 mr-2"></i> Print Invoice
+        </button>
+        <button onclick="document.getElementById('loadInvoiceModal').classList.remove('hidden')" class="flex items-center px-5 py-2 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition transform hover:scale-[1.02]">
+            <i data-lucide="list-checks" class="w-5 h-5 mr-2"></i> View/Load Invoices
+        </button>
+    </div>
+
+    <!-- Inventory Modal - Added visual cues for edit mode -->
+    <div id="inventoryModal" onclick="closeModalOnClickOutside(event, 'inventoryModal')" class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center hidden z-30">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-11/12 md:w-3/4 max-w-5xl">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">Shop Inventory Management</h3>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <!-- Dynamic Title to indicate Edit Mode -->
+                    <h4 id="inventoryFormTitle" class="font-semibold text-lg mb-3 text-gray-800">Add/Update Item</h4>
+                    <input type="hidden" id="inventoryItemId"> <div class="mb-3">
+                        <label for="inventoryItemName" class="block text-sm font-medium text-gray-700">Item Name/Description</label>
+                        <input type="text" id="inventoryItemName" placeholder="e.g., iPhone 15 Pro Max OLED" class="w-full text-input p-2 rounded border border-gray-300">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="inventoryItemCost" class="block text-sm font-medium text-gray-700">Wholesale Cost (Actual Price)</label>
+                        <input type="number" step="0.01" id="inventoryItemCost" placeholder="0.00" class="w-full text-input p-2 rounded border border-gray-300">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="inventoryItemStock" class="block text-sm font-medium text-gray-700">Initial Stock Quantity</label>
+                        <input type="number" step="1" id="inventoryItemStock" placeholder="10" class="w-full text-input p-2 rounded border border-gray-300">
+                    </div>
+                    
+                    <!-- NEW: Cancel Edit Button Area -->
+                    <div id="editControls" class="mt-3 hidden">
+                        <button onclick="clearInventoryForm()" class="w-full px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition text-sm">
+                            <i data-lucide="undo" class="w-4 h-4 inline mr-1"></i> Cancel Edit / Add New
+                        </button>
+                    </div>
+
+                    <button onclick="saveInventoryItem()" id="saveInventoryButton" class="w-full mt-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">
+                        <i data-lucide="package-plus" class="w-5 h-5 inline mr-2"></i> Add Item to Stock
+                    </button>
+                </div>
+                
+                <div class="lg:col-span-2 p-4 border border-gray-200 rounded-lg bg-white shadow-inner">
+                    <h4 class="font-semibold text-lg mb-3 text-gray-800">Current Stock List</h4>
+                    <input type="text" id="inventorySearch" oninput="filterInventory(this.value)" placeholder="Search item by name or SKU..." class="w-full text-input mb-4 p-2 border border-gray-300 rounded-lg focus:border-indigo-500">
+
+                    <div id="inventoryListContainer" class="max-h-96 overflow-y-auto space-y-2 pr-2">
+                        </div>
+                </div>
+            </div>
+            
+            <button onclick="document.getElementById('inventoryModal').classList.add('hidden')" class="mt-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Close Manager</button>
+        </div>
+    </div>
+    
+    <!-- Reports Modal - Added onclick for backdrop close -->
+    <div id="reportsModal" onclick="closeModalOnClickOutside(event, 'reportsModal')" class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center hidden z-30">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-11/12 md:w-5/6 max-w-7xl h-[90vh] flex flex-col">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">Business Performance Dashboard</h3>
+            
+            <!-- Removed the redundant 'Generate Report' button. The report now runs automatically on load and when the date changes. -->
+            <div class="flex items-center space-x-2 mb-4">
+                <label for="reportDateFilter" class="text-gray-700 font-semibold">Report Date:</label>
+                <!-- IMPORTANT: Set default to today via JS in loadReportsDashboard -->
+                <input type="date" id="reportDateFilter" class="p-2 border border-gray-300 rounded-lg" onchange="generateReport()">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-blue-100 p-4 rounded-xl shadow-md border-b-4 border-blue-500">
+                    <div class="text-sm font-medium text-blue-800">Total Sales (Filtered)</div>
+                    <div id="salesTotalDisplay" class="text-3xl font-extrabold text-blue-900 mt-1">0.00</div>
+                </div>
+                <div class="bg-green-100 p-4 rounded-xl shadow-md border-b-4 border-green-500">
+                    <div class="text-sm font-medium text-green-800">Total Profit (Filtered)</div>
+                    <div id="profitTotalDisplay" class="text-3xl font-extrabold text-green-900 mt-1">0.00</div>
+                </div>
+                <div class="bg-yellow-100 p-4 rounded-xl shadow-md border-b-4 border-yellow-500">
+                    <div class="text-sm font-medium text-yellow-800">Invoices Generated</div>
+                    <div id="invoiceCountDisplay" class="text-3xl font-extrabold text-yellow-900 mt-1">0</div>
+                </div>
+            </div>
+
+            <h4 class="font-semibold text-xl mb-3 text-gray-800 border-b pb-1">Current Low Stock Items (Stock < 10)</h4>
+            <div id="lowStockList" class="flex-grow overflow-y-auto space-y-2 pr-2 border p-3 rounded-lg bg-white shadow-inner">
+                <p class="text-gray-500">No low stock items found or report not generated.</p>
+            </div>
+            
+            <button onclick="document.getElementById('reportsModal').classList.add('hidden')" class="mt-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 self-start">Close Dashboard</button>
+        </div>
+    </div>
+    
+    <!-- Load Invoice Modal - Added onclick for backdrop close -->
+    <div id="loadInvoiceModal" onclick="closeModalOnClickOutside(event, 'loadInvoiceModal')" class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center hidden z-30">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-11/12 md:w-3/4 max-w-3xl">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">View & Load Saved Invoices</h3>
+            
+            <!-- UPDATED PLACEHOLDER TEXT -->
+            <input type="text" id="invoiceFilterInput" oninput="filterInvoices(this.value)" placeholder="Search by Invoice #, Customer Name, or Contact No..." class="w-full p-2 border border-gray-300 rounded-lg mb-4">
+
+            <div id="invoiceList" class="max-h-96 overflow-y-auto space-y-2">
+                <p class="text-gray-500 p-2">No saved invoices found.</p>
+            </div>
+            
+            <button onclick="document.getElementById('loadInvoiceModal').classList.add('hidden')" class="mt-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Close</button>
+        </div>
+    </div>
+    <div id="hiddenInvoiceData" style="display: none;">
+        <div id="hiddenTotalCost" data-value="0"></div>
+        <div id="hiddenTotalProfit" data-value="0"></div>
+    </div>
+
+    <div class="invoice-paper mx-auto p-6 md:p-10 max-w-7xl rounded-xl">
+        <div class="flex justify-between items-start mb-8 border-b pb-4">
+            <div id="companyInfoDisplay">
+                <h1 id="companyNameDisplay" class="text-3xl font-extrabold text-gray-800">Your Shop Name</h1>
+                <p id="companyAddressDisplay" class="text-sm text-gray-600">123 Main Street, City, Country</p>
+                <p id="companyContactDisplay" class="text-sm text-gray-600">Ph: (123) 456-7890 | Email: shop@example.com</p>
+            </div>
+            
+            <div id="companyInfoEdit" class="hidden w-1/2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h2 class="text-lg font-bold mb-2">Edit Header Details</h2>
+                <input type="text" id="editCompanyName" placeholder="Shop Name" class="w-full mb-1 p-1 border rounded">
+                <input type="text" id="editCompanyAddress" placeholder="Address" class="w-full mb-1 p-1 border rounded">
+                <input type="text" id="editCompanyContact" placeholder="Contact/Email" class="w-full mb-3 p-1 border rounded">
+                <div class="flex space-x-2">
+                    <button onclick="saveHeaderChanges()" class="px-3 py-1 bg-indigo-500 text-white rounded text-sm">Save</button>
+                    <button onclick="toggleHeaderEditMode(false)" class="px-3 py-1 bg-gray-400 text-white rounded text-sm">Cancel</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-end space-y-2">
+                <div class="text-2xl font-bold text-indigo-600">INVOICE</div>
+                <div class="text-lg text-gray-700"># <span id="invoiceNoDisplay" class="font-mono">00001</span></div>
+                <div class="text-sm text-gray-600">Date: <span id="dateDisplay" class="font-mono">2025-01-01</span></div>
+                <button onclick="enterHeaderEditMode()" class="print:hidden text-xs text-blue-500 hover:text-blue-700 flex items-center mt-2">
+                    <i data-lucide="edit" class="w-3 h-3 mr-1"></i> Edit Header
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-8 p-4 border border-gray-300 rounded-lg bg-gray-50">
+            <h3 class="text-lg font-semibold mb-2 text-gray-700">Customer Details</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                    <label class="block font-medium text-gray-700">Customer Name:</label>
+                    <input type="text" id="customerNameInput" placeholder="Enter Name" class="editable-field w-full p-1 border border-gray-300 rounded bg-white">
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700">Contact No:</label>
+                    <input type="text" id="customerContactInput" placeholder="Enter Contact" class="editable-field w-full p-1 border border-gray-300 rounded bg-white">
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700">Address:</label>
+                    <input type="text" id="customerAddressInput" placeholder="Enter Address" class="editable-field w-full p-1 border border-gray-300 rounded bg-white">
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full border-collapse border border-gray-400">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-700 text-sm font-semibold">
+                        <th class="px-2 py-2 border w-[50px]">#</th>
+                        <th class="px-2 py-2 border text-left">Item Description</th>
+                        <th class="px-2 py-2 border w-[100px]">Qty</th>
+                        <th class="px-2 py-2 border w-[120px] print:hidden">LPRs</th>
+                        <th class="px-2 py-2 border w-[120px]">Price</th>
+                        <th class="px-2 py-2 border w-[150px]">Amount</th>
+                        <th class="px-2 py-2 border w-[50px] print:hidden editable-action-column">Act</th>
+                    </tr>
+                </thead>
+                <tbody id="invoiceRows">
+                    <tr id="row-0">
+                        <td class="px-2 py-1 border text-center font-mono text-sm">1</td>
+                        
+                        <td class="px-2 py-1 border text-left relative">
+                            <input type="text" 
+                                value="Item Description" 
+                                oninput="searchInventory(this)" 
+                                class="item-description-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent"
+                                data-item-cost="0.00" >
+                            <div class="search-results-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-48 overflow-y-auto">
+                                </div>
+                        </td>
+
+                        <td class="px-2 py-1 border text-center">
+                            <input type="number" value="1" oninput="calculateTotal()" class="qty-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-center">
+                        </td>
+                        <td class="px-2 py-1 border text-right print:hidden">
+                            <input type="text" value="0.00" class="lprs-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-right">
+                        </td>
+                        <td class="px-2 py-1 border text-right">
+                            <input type="number" step="0.01" value="0.00" oninput="calculateTotal()" class="price-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-right">
+                        </td>
+                        <td class="px-2 py-1 border text-right total-amount">0.00</td>
+                        <td class="px-2 py-1 border text-center w-[50px] print:hidden editable-action-column">
+                            <button onclick="removeRow('row-0')" class="text-red-500 hover:text-red-700">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer-controls flex justify-start mb-6 print:hidden">
+            <button onclick="addRow()" class="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-semibold">
+                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Add Row
+            </button>
+        </div>
+
+        <div class="flex justify-end">
+            <div class="w-full md:w-1/2">
+                <!-- Subtotal/Net Amount Display -->
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center text-xl font-bold text-gray-800 border-b-2 border-indigo-200 pb-2">
+                        <span>Net Amount:</span>
+                        <span id="netAmountDisplay" class="text-indigo-600">0.00</span>
+                    </div>
+                </div>
+
+                <!-- NEW: Grid layout for core calculation fields (Past Due & Paid) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 pt-4">
+                    
+                    <!-- Left Column: Previous Balance Due -->
+                    <div class="space-y-2 mb-4 md:mb-0">
+                        <div class="flex justify-between items-center text-md">
+                            <span class="text-gray-700">Prev. Due:</span>
+                            <input type="number" step="0.01" value="0.00" id="pastDueInput" oninput="calculateTotal()" 
+                                class="editable-field w-24 p-1 border border-gray-300 rounded text-right bg-white font-semibold text-red-700 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Cash Paid -->
+                    <div class="space-y-2">
+                         <div class="flex justify-between items-center text-md">
+                            <span class="text-gray-700">Total Payable:</span>
+                            <span id="grandTotalPayableDisplay" class="text-purple-600 font-semibold">0.00</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center text-md">
+                            <span class="text-gray-700">Cash Paid:</span>
+                            <input type="number" step="0.01" value="0.00" id="paidInput" oninput="calculateTotal()" 
+                                class="editable-field w-24 p-1 border border-gray-300 rounded text-right bg-white font-semibold text-green-700 text-sm">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Final Result (Remaining Due) - Stays wide and prominent -->
+                <div class="flex justify-between items-center text-xl font-bold text-gray-800 pt-4 border-t-2 border-red-300 mt-4">
+                    <span>Remaining Due:</span>
+                    <span id="remainingDueDisplay" class="text-red-600">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        
+        
+        <div class="save-button-container flex justify-center mt-8 print:hidden">
+            <button onclick="saveInvoice()" class="flex items-center px-8 py-3 bg-green-600 text-white text-lg font-bold rounded-lg shadow-xl hover:bg-green-700 transition transform hover:scale-[1.02]">
+                <i data-lucide="save" class="w-6 h-6 mr-2"></i> Save Current Invoice
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration Constants ---
+        const INVOICES_STORAGE_KEY = 'savedInvoices';
+        const HEADER_STORAGE_KEY = 'shopHeaderData';
+        const INVENTORY_STORAGE_KEY = 'shopInventory'; 
+
+        // --- Utility Functions ---
+
+        /**
+         * Closes a modal if the click event originated directly on the modal backdrop.
+         * @param {Event} event The click event object.
+         * @param {string} modalId The ID of the modal element to close.
+         */
+        window.closeModalOnClickOutside = (event, modalId) => {
+            const modal = document.getElementById(modalId);
+            // Check if the click target is the modal itself (the backdrop)
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+            }
+        };
+
+        /**
+         * Formats a number as currency (e.g., adds commas and forces 2 decimal places).
+         * @param {number} amount The numeric value to format.
+         * @returns {string} The formatted currency string.
+         */
+        const formatCurrency = (amount) => {
+            return (amount || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        };
+        
+        /**
+         * Safely attempts to parse and format a date string, handling invalid formats gracefully.
+         * This prevents "Invalid Date" text from appearing in the invoice list.
+         * @param {string} dateString The date string from storage (preferably ISO 8601).
+         * @returns {string} The formatted date or 'Invalid Date'.
+         */
+        const getDisplayDate = (dateString) => {
+            const date = new Date(dateString);
+            // Check if the date object is valid
+            if (isNaN(date.getTime())) {
+                return 'Invalid Date';
+            }
+            // Return localized date string
+            return date.toLocaleDateString();
+        };
+
+        /**
+         * Displays a temporary notification message.
+         * @param {string} message The message content.
+         * @param {boolean} isError If true, displays as an error (red).
+         */
+        const showMessage = (message, isError = false) => {
+            const box = document.getElementById('messageBox');
+            box.textContent = message;
+            box.classList.remove('opacity-0', 'bg-red-600', 'bg-green-600', 'hidden');
+            box.classList.add('opacity-100', isError ? 'bg-red-600' : 'bg-green-600');
+            
+            clearTimeout(box.timeoutId);
+            box.timeoutId = setTimeout(() => {
+                box.classList.remove('opacity-100');
+                box.classList.add('opacity-0');
+                setTimeout(() => box.classList.add('hidden'), 300); // Hide after transition
+            }, 3000);
+        };
+        
+        // --- Invoice Edit Mode Control ---
+        
+        /**
+         * Toggles the editability of the main invoice form.
+         * @param {boolean} isEditable True to enable editing, false to set read-only mode.
+         */
+        const setInvoiceEditMode = (isEditable) => {
+            const fields = document.querySelectorAll('.editable-field');
+            const footerControls = document.querySelector('.footer-controls');
+            const saveButtonContainer = document.querySelector('.save-button-container');
+            const actionColumns = document.querySelectorAll('.editable-action-column');
+
+            fields.forEach(input => {
+                input.readOnly = !isEditable;
+                // Add/remove a class to visually distinguish read-only state
+                if (isEditable) {
+                    input.classList.remove('read-only-bg');
+                } else {
+                    input.classList.add('read-only-bg');
+                }
+            });
+
+            // Toggle visibility of controls and buttons
+            if (isEditable) {
+                footerControls.classList.remove('hidden');
+                saveButtonContainer.classList.remove('hidden');
+                actionColumns.forEach(col => col.classList.remove('hidden'));
+            } else {
+                footerControls.classList.add('hidden');
+                saveButtonContainer.classList.add('hidden');
+                actionColumns.forEach(col => col.classList.add('hidden'));
+            }
+        };
+
+        // --- Inventory Persistence Logic ---
+
+        /**
+         * Retrieves the entire inventory array from local storage.
+         * @returns {Array} The list of inventory items.
+         */
+        const getInventory = () => {
+            return JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || '[]');
+        };
+
+        /**
+         * Saves the inventory array back to local storage.
+         * @param {Array} inventory The list of items to save.
+         */
+        const saveInventory = (inventory) => {
+            localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventory));
+        };
+        
+        // Generates a simple ID for new items
+        const generateInventoryId = () => {
+            const inventory = getInventory();
+            if (inventory.length === 0) return 'SKU-1001';
+            
+            // Find the highest existing ID number and increment it
+            const maxIdNum = inventory.reduce((max, item) => {
+                // Ensure item.id exists and starts with 'SKU-'
+                if (item.id && item.id.startsWith('SKU-')) {
+                    const num = parseInt(item.id.replace('SKU-', '')) || 0;
+                    return Math.max(max, num);
+                }
+                return max;
+            }, 1000); // Start check from the default minimum
+            
+            return 'SKU-' + (maxIdNum + 1);
+        };
+
+        /**
+         * Resets the Add/Edit form.
+         */
+        const clearInventoryForm = () => {
+            document.getElementById('inventoryItemId').value = '';
+            document.getElementById('inventoryItemName').value = '';
+            document.getElementById('inventoryItemCost').value = '';
+            document.getElementById('inventoryItemStock').value = '';
+            
+            // Reset visuals to Add New mode
+            document.getElementById('inventoryFormTitle').textContent = 'Add/Update Item';
+            document.getElementById('editControls').classList.add('hidden'); // Hide Cancel button
+            document.getElementById('saveInventoryButton').innerHTML = '<i data-lucide="package-plus" class="w-5 h-5 inline mr-2"></i> Add Item to Stock';
+
+            if (typeof lucide !== 'undefined') {
+                 lucide.createIcons();
+            }
+        }
+        
+        /**
+         * Saves a new item or updates an existing one based on the form inputs.
+         */
+        window.saveInventoryItem = () => {
+            const id = document.getElementById('inventoryItemId').value;
+            const name = document.getElementById('inventoryItemName').value.trim();
+            const cost = parseFloat(document.getElementById('inventoryItemCost').value) || 0;
+            const stock = parseInt(document.getElementById('inventoryItemStock').value) || 0;
+            
+            if (!name || cost <= 0 || stock < 0) { // Stock can be 0, but not negative
+                showMessage("Item Name, Wholesale Cost (must be > 0), and Stock (must be ≥ 0) must be valid to save.", true);
+                return;
+            }
+
+            let inventory = getInventory();
+            const now = new Date().toLocaleString();
+            
+            if (id) {
+                // Update existing item
+                const index = inventory.findIndex(item => item.id === id);
+                if (index !== -1) {
+                    inventory[index].name = name;
+                    inventory[index].cost = cost;
+                    inventory[index].stock = stock;
+                    inventory[index].lastUpdated = now;
+                    showMessage(`Item ${id} updated successfully. Stock: ${stock}, Cost: ${formatCurrency(cost)}`);
+                }
+            } else {
+                // Check for duplicates before adding
+                if (inventory.some(item => item.name.toLowerCase() === name.toLowerCase())) {
+                    showMessage("An item with this name already exists. Please edit the existing item or use a unique name.", true);
+                    return;
+                }
+                
+                // Add new item
+                const newItem = {
+                    id: generateInventoryId(),
+                    name: name,
+                    cost: cost,
+                    stock: stock,
+                    dateAdded: now,
+                    lastUpdated: now
+                };
+                inventory.push(newItem);
+                showMessage(`New item ${newItem.id} added to stock: ${stock}.`);
+            }
+
+            saveInventory(inventory);
+            clearInventoryForm();
+            renderInventoryList(inventory);
+            document.getElementById('inventorySearch').value = ''; // Reset search after saving
+        };
+
+        /**
+         * Populates the form to edit an existing item and changes the UI mode.
+         */
+        window.editInventoryItem = (id) => {
+            const inventory = getInventory();
+            const item = inventory.find(i => i.id === id);
+            
+            if (item) {
+                document.getElementById('inventoryItemId').value = item.id;
+                document.getElementById('inventoryItemName').value = item.name;
+                document.getElementById('inventoryItemCost').value = item.cost.toFixed(2);
+                document.getElementById('inventoryItemStock').value = item.stock;
+                
+                // VISUAL CUES TO INDICATE EDIT MODE
+                document.getElementById('inventoryFormTitle').textContent = `Editing Item: ${item.id}`;
+                document.getElementById('editControls').classList.remove('hidden'); // Show Cancel button
+                
+                document.getElementById('saveInventoryButton').innerHTML = '<i data-lucide="save" class="w-5 h-5 inline mr-2"></i> Update Stock & Cost';
+                
+                // Scroll to the top of the form for visibility
+                document.getElementById('inventoryModal').querySelector('.bg-white').scrollTo(0, 0); 
+                
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+        };
+
+        /**
+         * Deletes an item from the inventory.
+         */
+        window.deleteInventoryItem = (id) => {
+            if (!confirm(`Are you sure you want to delete item ${id}? This cannot be undone.`)) return;
+
+            let inventory = getInventory();
+            const newInventory = inventory.filter(item => item.id !== id);
+            
+            saveInventory(newInventory);
+            renderInventoryList(newInventory);
+            showMessage(`Item ${id} deleted from inventory.`, true);
+            clearInventoryForm(); // Clear the form just in case the deleted item was loaded
+        };
+        
+
+        /**
+         * Renders the inventory list in the modal.
+         */
+        const renderInventoryList = (inventory) => {
+            const listContainer = document.getElementById('inventoryListContainer');
+            listContainer.innerHTML = '';
+            
+            // Sort by stock level (low to high)
+            inventory.sort((a, b) => a.stock - b.stock);
+            
+            if (inventory.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-500 p-2">No items in stock. Add some above!</p>';
+                return;
+            }
+
+            inventory.forEach((item) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-gray-100 hover:bg-indigo-50 transition';
+                
+                // Determine color based on stock level
+                const stockClass = item.stock < 10 ? 'red' : 'green';
+
+                itemDiv.innerHTML = `
+                    <div class="text-sm overflow-hidden flex-grow mr-4">
+                        <span class="font-bold text-indigo-700 block">${item.name}</span>
+                        <div class="text-xs text-gray-600">
+                            SKU: ${item.id} | Cost: ${formatCurrency(item.cost)} | Stock: <span class="font-extrabold text-${stockClass}-600">${item.stock}</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 flex-shrink-0">
+                        <button onclick="editInventoryItem('${item.id}')" class="px-3 py-1 bg-yellow-500 text-white text-xs rounded-lg hover:bg-yellow-600 font-semibold">Edit</button>
+                        <button onclick="deleteInventoryItem('${item.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 font-semibold">Delete</button>
+                    </div>
+                `;
+                listContainer.appendChild(itemDiv);
+            });
+            if (typeof lucide !== 'undefined') {
+                 lucide.createIcons();
+            }
+        };
+        
+        /**
+         * Global function to open the Inventory Manager modal.
+         */
+        window.loadInventoryManager = () => {
+            clearInventoryForm();
+            renderInventoryList(getInventory());
+            document.getElementById('inventorySearch').value = '';
+            document.getElementById('inventoryModal').classList.remove('hidden');
+        };
+
+        /**
+         * Filters the inventory list based on search term.
+         */
+        window.filterInventory = (searchTerm) => {
+            const term = searchTerm.toLowerCase().trim();
+            const inventory = getInventory();
+            
+            if (!term) {
+                renderInventoryList(inventory);
+                return;
+            }
+
+            const filteredInventory = inventory.filter(item => {
+                const name = String(item.name || '').toLowerCase();
+                const id = String(item.id || '').toLowerCase();
+                
+                return name.includes(term) || id.includes(term);
+            });
+            
+            renderInventoryList(filteredInventory);
+        };
+
+        // --- Inventory Search Integration ---
+
+        /**
+         * Finds and displays matching inventory items as the user types in the invoice.
+         * @param {HTMLInputElement} input The item description input field.
+         */
+        window.searchInventory = (input) => {
+            // Only search if the form is in editable mode
+            if (input.readOnly) return;
+
+            const searchTerm = input.value.toLowerCase().trim();
+            // Get the sibling container for the search results
+            const container = input.nextElementSibling; 
+            const inventory = getInventory();
+
+            container.innerHTML = '';
+            if (!searchTerm) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            const filtered = inventory.filter(item => 
+                item.name.toLowerCase().includes(searchTerm) || item.id.toLowerCase().includes(searchTerm)
+            ).slice(0, 10); // Limit to 10 results
+
+            if (filtered.length > 0) {
+                container.classList.remove('hidden');
+                
+                filtered.forEach(item => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'p-2 cursor-pointer hover:bg-indigo-50 border-b border-gray-100 text-sm';
+                    resultDiv.innerHTML = `
+                        <span class="font-semibold">${item.name}</span> 
+                        <span class="text-xs text-gray-500 block">SKU: ${item.id} | Stock: ${item.stock} | Cost: ${formatCurrency(item.cost)}</span>
+                    `;
+                    // When clicked, select the item and hide the results
+                    resultDiv.onclick = () => selectInventoryItem(input, item);
+                    container.appendChild(resultDiv);
+                });
+            } else {
+                container.classList.add('hidden');
+            }
+        };
+        
+        /**
+         * Populates the invoice row with data from the selected inventory item.
+         * @param {HTMLInputElement} input The item description input field.
+         * @param {Object} item The selected inventory item object.
+         */
+        const selectInventoryItem = (input, item) => {
+            // 1. Set the display name
+            input.value = item.name;
+            // 2. Set the hidden cost price on the input attribute
+            input.setAttribute('data-item-cost', item.cost.toFixed(2));
+            // 3. Clear and hide the search results
+            input.nextElementSibling.innerHTML = '';
+            input.nextElementSibling.classList.add('hidden');
+            
+            // --- Auto-fill Placeholder Price ---
+            const row = input.closest('tr');
+            const priceInput = row.querySelector('.price-input'); 
+            
+            // Set a default selling price (e.g., 20% markup, user can change this)
+            priceInput.value = (item.cost * 1.20).toFixed(2); 
+
+            calculateTotal(); // Trigger calculation for the current row
+        };
+
+
+        // --- Invoice Generation and Persistence Logic ---
+
+        /**
+         * Generates a unique, persistent invoice number and resets the form to editable mode.
+         * @param {boolean} silent If true, suppresses the success message.
+         */
+        window.generateNewInvoice = (silent = false) => {
+            // Load saved invoices to determine the next number
+            const invoices = JSON.parse(localStorage.getItem(INVOICES_STORAGE_KEY) || '[]');
+            
+            // Get the highest reliable invoice number, or start at 1000
+            const lastInvoiceNo = invoices.reduce((max, inv) => {
+                // Safely parse the invoice number
+                const currentNo = parseInt(inv.invoiceNo) || 0;
+                return Math.max(max, currentNo);
+            }, 1000); 
+
+            const nextInvoiceNo = (lastInvoiceNo + 1).toString().padStart(5, '0');
+
+            // Set new invoice number and date
+            document.getElementById('invoiceNoDisplay').textContent = nextInvoiceNo;
+            document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+            
+            // Clear Customer Data
+            document.getElementById('customerNameInput').value = '';
+            document.getElementById('customerContactInput').value = '';
+            document.getElementById('customerAddressInput').value = '';
+            
+            // Clear Totals
+            document.getElementById('paidInput').value = '0.00';
+            document.getElementById('pastDueInput').value = '0.00'; // Reset Past Due
+            
+
+            // Clear Invoice Rows (keep only one empty row)
+            const tableBody = document.getElementById('invoiceRows');
+            tableBody.innerHTML = ''; // Clear all
+            
+            // Set to editable mode before adding the row
+            setInvoiceEditMode(true);
+            
+            // Add a single starting row
+            addRow(); 
+
+            if (!silent) {
+                showMessage(`New Invoice #${nextInvoiceNo} started.`);
+            }
+        };
+
+        /**
+         * Adds a new, empty row to the invoice table.
+         */
+        window.addRow = () => {
+            const tableBody = document.getElementById('invoiceRows');
+            const newRowIndex = tableBody.rows.length;
+            const newRow = tableBody.insertRow();
+            
+            // Add Row ID for easy reference/removal
+            newRow.id = `row-${newRowIndex}`; 
+
+            newRow.innerHTML = `
+                <td class="px-2 py-1 border text-center font-mono text-sm">${newRowIndex + 1}</td>
+                
+                <td class="px-2 py-1 border text-left relative">
+                    <input type="text" 
+                           value="" 
+                           oninput="searchInventory(this)" 
+                           class="item-description-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent"
+                           data-item-cost="0.00" > <div class="search-results-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-48 overflow-y-auto"></div>
+                </td>
+                
+                <td class="px-2 py-1 border text-center">
+                    <input type="number" value="1" oninput="calculateTotal()" class="qty-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-center">
+                </td>
+                <td class="px-2 py-1 border text-right print:hidden">
+                    <input type="text" value="0.00" class="lprs-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-right">
+                </td>
+                <td class="px-2 py-1 border text-right">
+                    <input type="number" step="0.01" value="0.00" oninput="calculateTotal()" class="price-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-right">
+                </td>
+                <td class="px-2 py-1 border text-right total-amount">0.00</td>
+                <td class="px-2 py-1 border text-center w-[50px] print:hidden editable-action-column">
+                    <button onclick="removeRow('row-${newRowIndex}')" class="text-red-500 hover:text-red-700">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </td>
+            `;
+            // Reapply edit mode settings to the new row if needed (though new row is only added in editable mode)
+            if (!document.querySelector('.save-button-container').classList.contains('hidden')) {
+                 newRow.querySelectorAll('.editable-field').forEach(input => input.readOnly = false);
+            }
+            
+            if (typeof lucide !== 'undefined') {
+                 lucide.createIcons();
+            }
+            calculateTotal();
+        };
+
+        /**
+         * Removes a row by its ID.
+         */
+        window.removeRow = (rowId) => {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+                calculateTotal();
+            }
+        };
+
+        /**
+         * Recalculates all totals.
+         */
+        window.calculateTotal = () => {
+            const tableBody = document.getElementById('invoiceRows');
+            let grandTotal = 0; // This is the subtotal (pre-discount, if any)
+            let totalCostOfGoodsSold = 0; 
+            
+            for (let i = 0; i < tableBody.rows.length; i++) {
+                const row = tableBody.rows[i];
+                const qtyInput = row.querySelector('.qty-input');
+                const priceInput = row.querySelector('.price-input');
+                const descriptionInput = row.querySelector('.item-description-input');
+                const totalCell = row.querySelector('.total-amount');
+
+                const qty = parseInt(qtyInput ? qtyInput.value : 0) || 0;
+                const price = parseFloat(priceInput ? priceInput.value : 0) || 0;
+                // PULL THE HIDDEN COST
+                const cost = parseFloat(descriptionInput ? descriptionInput.getAttribute('data-item-cost') : 0) || 0;
+
+                const rowTotal = qty * price;
+                const rowCost = qty * cost;
+
+                totalCell.textContent = formatCurrency(rowTotal); 
+
+                grandTotal += rowTotal;
+                totalCostOfGoodsSold += rowCost;
+            }
+
+            // --- Calculation Update: Net Amount is now equal to the Grand Total (Subtotal) ---
+            const netAmount = grandTotal; 
+            const totalProfit = netAmount - totalCostOfGoodsSold;
+            
+            // --- Multi-stage Payment Calculation ---
+            const pastDueBalance = parseFloat(document.getElementById('pastDueInput').value) || 0;
+            const grandTotalPayable = netAmount + pastDueBalance; // Net amount + past dues
+            
+            const paidAmount = parseFloat(document.getElementById('paidInput').value) || 0; // Cash Paid (Current Transaction)
+            const remainingDue = grandTotalPayable - paidAmount; 
+            
+            // Update display totals
+            document.getElementById('netAmountDisplay').textContent = formatCurrency(netAmount); // The main total
+            document.getElementById('grandTotalPayableDisplay').textContent = formatCurrency(grandTotalPayable); 
+            document.getElementById('remainingDueDisplay').textContent = formatCurrency(remainingDue); 
+
+            // Store hidden cost and profit for saving/reporting
+            document.getElementById('hiddenTotalCost').setAttribute('data-value', totalCostOfGoodsSold.toFixed(2));
+            document.getElementById('hiddenTotalProfit').setAttribute('data-value', totalProfit.toFixed(2));
+        };
+
+        /**
+         * Saves the current invoice data, including payment details and updates inventory stock.
+         */
+        window.saveInvoice = () => {
+            // Check if readOnly mode is active (shouldn't happen, but just in case)
+            if (document.getElementById('customerNameInput').readOnly) {
+                showMessage("Cannot save: Invoice is in read-only mode. Start a New Invoice to save changes.", true);
+                return;
+            }
+
+            // 1. COLLECT INVOICE DETAILS
+            const invoiceNo = document.getElementById('invoiceNoDisplay').textContent.trim();
+            const customerName = document.getElementById('customerNameInput').value.trim();
+            const netAmount = parseFloat(document.getElementById('netAmountDisplay').textContent.replace(/[^\d.]/g, '')) || 0;
+            
+            const totalCost = parseFloat(document.getElementById('hiddenTotalCost').getAttribute('data-value')) || 0;
+            const totalProfit = parseFloat(document.getElementById('hiddenTotalProfit').getAttribute('data-value')) || 0;
+
+            // --- Payment Details ---
+            const pastDueBalance = parseFloat(document.getElementById('pastDueInput').value) || 0; 
+            const grandTotalPayable = parseFloat(document.getElementById('grandTotalPayableDisplay').textContent.replace(/[^\d.]/g, '')) || 0;
+            const paidAmount = parseFloat(document.getElementById('paidInput').value) || 0; 
+            const remainingDue = grandTotalPayable - paidAmount; 
+            
+
+            if (netAmount === 0 || !customerName) {
+                showMessage("Invoice must have items and a Customer Name before saving.", true);
+                return;
+            }
+
+            // 2. EXTRACT LINE ITEMS AND UPDATE STOCK
+            const invoiceRows = document.getElementById('invoiceRows').rows;
+            const itemsSold = [];
+            let inventory = getInventory(); 
+            let shouldUpdateInventory = false; 
+
+            for (let i = 0; i < invoiceRows.length; i++) {
+                const row = invoiceRows[i];
+                const descriptionInput = row.querySelector('.item-description-input');
+                const qtyInput = row.querySelector('.qty-input');
+                const priceInput = row.querySelector('.price-input');
+                
+                const itemName = descriptionInput.value.trim();
+                const qtySold = parseInt(qtyInput.value) || 0;
+                const costPerItem = parseFloat(descriptionInput.getAttribute('data-item-cost')) || 0;
+                const salePricePerItem = parseFloat(priceInput.value) || 0;
+
+                if (qtySold > 0 && itemName) {
+                    itemsSold.push({
+                        name: itemName,
+                        qty: qtySold,
+                        cost: costPerItem, 
+                        price: salePricePerItem
+                    });
+
+                    // --- STOCK DEDUCTION LOGIC (Only runs if a new invoice is being saved) ---
+                    // Since we generate a new invoice number every time, this deduction is for the current sale.
+                    const invIndex = inventory.findIndex(item => item.name === itemName);
+
+                    if (invIndex !== -1) {
+                        // Deduct stock
+                        inventory[invIndex].stock = Math.max(0, inventory[invIndex].stock - qtySold);
+                        inventory[invIndex].lastSoldDate = new Date().toLocaleString();
+                        shouldUpdateInventory = true;
+                    }
+                }
+            }
+            
+            // 3. SAVE UPDATED INVENTORY (only if changes were made)
+            if (shouldUpdateInventory) {
+                 saveInventory(inventory);
+            }
+            
+            // 4. PREPARE FINAL INVOICE OBJECT
+            const invoiceData = {
+                invoiceNo: invoiceNo,
+                customerName: customerName,
+                // FIX: Use toISOString() for universal date parsing reliability
+                date: new Date().toISOString(), 
+                
+                // Current Purchase Totals (Net is same as GrandTotal now)
+                netAmount: netAmount, 
+                totalCost: totalCost, 
+                totalProfit: totalProfit,
+
+                // Payment/Balance Totals
+                pastDueBalance: pastDueBalance, 
+                grandTotalPayable: grandTotalPayable, 
+                paidAmount: paidAmount, 
+                remainingDue: remainingDue, 
+                
+                items: itemsSold,
+                clientData: {
+                    address: document.getElementById('customerAddressInput').value,
+                    contact: document.getElementById('customerContactInput').value,
+                }
+            };
+            
+            // 5. SAVE INVOICE TO STORAGE
+            let invoices = JSON.parse(localStorage.getItem(INVOICES_STORAGE_KEY) || '[]');
+            const existingIndex = invoices.findIndex(inv => inv.invoiceNo === invoiceNo);
+
+            if (existingIndex !== -1) {
+                invoices[existingIndex] = invoiceData;
+                showMessage(`Invoice ${invoiceNo} updated successfully!`);
+            } else {
+                invoices.push(invoiceData); 
+                showMessage(`Invoice ${invoiceNo} saved successfully!`);
+            }
+            
+            localStorage.setItem(INVOICES_STORAGE_KEY, JSON.stringify(invoices));
+
+            // 6. START NEW INVOICE
+            generateNewInvoice();
+        };
+
+        // --- Invoice Load/View Logic ---
+
+        window.loadInvoices = () => {
+            // This function is primarily for the initial load; filtering happens in filterInvoices()
+            const invoices = JSON.parse(localStorage.getItem(INVOICES_STORAGE_KEY) || '[]');
+            const listContainer = document.getElementById('invoiceList');
+            listContainer.innerHTML = '';
+            
+            if (invoices.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-500 p-2">No saved invoices found.</p>';
+                return;
+            }
+
+            // Since filterInvoices now handles the rendering, let's just make sure the full list loads
+            // when the filter input is empty.
+            filterInvoices(document.getElementById('invoiceFilterInput').value);
+
+            // Re-render icons if needed
+            if (typeof lucide !== 'undefined') {
+                 lucide.createIcons();
+            }
+        };
+
+        window.filterInvoices = (searchTerm) => {
+            const term = searchTerm.toLowerCase().trim();
+            const invoices = JSON.parse(localStorage.getItem(INVOICES_STORAGE_KEY) || '[]');
+            const listContainer = document.getElementById('invoiceList');
+            listContainer.innerHTML = '';
+
+            const filteredInvoices = invoices.filter(inv => {
+                const customer = String(inv.customerName || '').toLowerCase();
+                const invNo = String(inv.invoiceNo || '').toLowerCase();
+                // Search by customer contact number (safe check with optional chaining if clientData is missing)
+                const contact = String(inv.clientData?.contact || '').toLowerCase(); 
+                
+                return customer.includes(term) || invNo.includes(term) || contact.includes(term);
+            });
+
+            if (filteredInvoices.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-500 p-2">No matching invoices found.</p>';
+                return;
+            }
+            
+            filteredInvoices.sort((a, b) => (b.invoiceNo) - (a.invoiceNo)).forEach(invoice => {
+                 const invoiceDiv = document.createElement('div');
+                 invoiceDiv.className = 'flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-gray-100 hover:bg-blue-50 transition';
+                 
+                 const remaining = invoice.remainingDue !== undefined ? invoice.remainingDue : invoice.netAmount;
+                 const pastDue = invoice.pastDueBalance || 0;
+                 
+                 // Generate a unique identifier for deletion if invoiceNo is missing (for corrupted data)
+                 // This ensures the button passes a usable key or the object itself for deletion.
+                 const deletionKey = invoice.invoiceNo || `corrupted-${Math.random().toString(36).substring(2, 9)}`;
+
+                 invoiceDiv.innerHTML = `
+                     <div class="text-sm overflow-hidden flex-grow mr-4">
+                         <!-- FIXED: Added || 'N/A' safety checks here to handle corrupted old data -->
+                         <span class="font-bold text-blue-700 block">INV #${invoice.invoiceNo || 'N/A'} - ${invoice.customerName || 'No Customer'}</span>
+                         <div class="text-xs text-gray-600">
+                             Date: ${getDisplayDate(invoice.date)} | Net Sale: ${formatCurrency(invoice.netAmount)} | Prev Due: ${formatCurrency(pastDue)} | **Remaining: ${formatCurrency(remaining)}**
+                         </div>
+                     </div>
+                     <div class="flex space-x-2 flex-shrink-0">
+                         <button onclick="applyInvoiceByNo('${invoice.invoiceNo}'); document.getElementById('loadInvoiceModal').classList.add('hidden');" class="px-3 py-1 bg-green-500 text-white text-xs rounded-lg hover:bg-green-600 font-semibold">Load</button>
+                         <!-- FIXED: Pass a safe string for deletion -->
+                         <button onclick="deleteInvoiceByNo('${invoice.invoiceNo || invoice.date}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 font-semibold">Delete</button>
+                     </div>
+                 `;
+                 listContainer.appendChild(invoiceDiv);
+            });
+            // Re-render icons if needed
+            if (typeof lucide !== 'undefined') {
+                 lucide.createIcons();
+            }
+        };
+
+        window.applyInvoiceByNo = (invoiceNo) => {
+            const invoices = JSON.parse(localStorage.getItem(INVOICES_STORAGE_KEY) || '[]');
+            const invoice = invoices.find(inv => inv.invoiceNo === invoiceNo);
+
+            if (!invoice) {
+                showMessage(`Invoice #${invoiceNo} not found.`, true);
+                return;
+            }
+
+            // 1. Reset the whole invoice view
+            generateNewInvoice(true); 
+
+            // 2. Apply Header Data
+            document.getElementById('invoiceNoDisplay').textContent = invoice.invoiceNo;
+            document.getElementById('dateDisplay').textContent = getDisplayDate(invoice.date); 
+
+            // 3. Apply Customer Data (Using optional chaining for safety)
+            document.getElementById('customerNameInput').value = invoice.customerName || '';
+            document.getElementById('customerContactInput').value = invoice.clientData?.contact || '';
+            document.getElementById('customerAddressInput').value = invoice.clientData?.address || '';
+
+            // 4. Clear and rebuild rows
+            const tableBody = document.getElementById('invoiceRows');
+            tableBody.innerHTML = '';
+            
+            invoice.items.forEach((item, index) => {
+                const newRowIndex = tableBody.rows.length;
+                const newRow = tableBody.insertRow();
+                newRow.id = `row-${newRowIndex}`;
+                
+                newRow.innerHTML = `
+                    <td class="px-2 py-1 border text-center font-mono text-sm">${index + 1}</td>
+                    
+                    <td class="px-2 py-1 border text-left relative">
+                        <input type="text" 
+                               value="${item.name}" 
+                               oninput="searchInventory(this)" 
+                               class="item-description-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent"
+                               data-item-cost="${(item.cost || 0).toFixed(2)}" > <div class="search-results-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-48 overflow-y-auto"></div>
+                    </td>
+
+                    <td class="px-2 py-1 border text-center">
+                        <input type="number" value="${item.qty}" oninput="calculateTotal()" class="qty-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-center">
+                    </td>
+                    <td class="px-2 py-1 border text-right print:hidden">
+                        <input type="text" value="0.00" class="lprs-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-right">
+                    </td>
+                    <td class="px-2 py-1 border text-right">
+                        <input type="number" step="0.01" value="${item.price.toFixed(2)}" oninput="calculateTotal()" class="price-input editable-field w-full p-1 border border-transparent focus:border-gray-300 focus:outline-none bg-transparent text-right">
+                    </td>
+                    <td class="px-2 py-1 border text-right total-amount">0.00</td>
+                    <td class="px-2 py-1 border text-center w-[50px] print:hidden editable-action-column">
+                        <button onclick="removeRow('row-${newRowIndex}')" class="text-red-500 hover:text-red-700">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+            });
+            
+            // 5. Apply Totals and Recalculate
+            document.getElementById('pastDueInput').value = (invoice.pastDueBalance || 0).toFixed(2); 
+            document.getElementById('paidInput').value = (invoice.paidAmount || 0).toFixed(2); 
+            
+            calculateTotal(); 
+
+            // 6. DISABLE EDITING
+            setInvoiceEditMode(false);
+            
+            if (typeof lucide !== 'undefined') {
+                 lucide.createIcons();
+            }
+            showMessage(`Invoice #${invoiceNo} loaded (Read-Only).`);
+        };
+
+        /**
+         * Deletes an invoice based on its number, or its date if the number is corrupt.
+         * @param {string} key The invoiceNo (for valid invoices) or the date (for corrupted ones).
+         */
+        window.deleteInvoiceByNo = (key) => {
+            const invoices = JSON.parse(localStorage.getItem(INVOICES_STORAGE_KEY) || '[]');
+            let initialLength = invoices.length;
+
+            if (!key) {
+                showMessage("Cannot delete: Missing identifier.", true);
+                return;
+            }
+            
+            // Determine if the key is the invoice number (reliable) or a date/other corrupt string
+            const isInvoiceNo = !isNaN(parseInt(key)) && key.length < 10; // Simple heuristic
+
+            let newInvoices = [];
+            let deletedInvoice = null;
+            let deletedCount = 0;
+
+            if (isInvoiceNo) {
+                // Case 1: Key is a reliable invoice number (e.g., "00001", "1002")
+                if (!confirm(`Are you sure you want to permanently delete Invoice #${key}?`)) return;
+                deletedInvoice = invoices.find(inv => String(inv.invoiceNo) === key);
+                newInvoices = invoices.filter(inv => String(inv.invoiceNo) !== key);
+                deletedCount = initialLength - newInvoices.length;
+            } else {
+                 // Case 2: Key is a potentially corrupted value (e.g., 'undefined' or a full ISO date string)
+                 if (!confirm(`Are you sure you want to permanently delete the corrupted invoice starting with ${key.substring(0, 10)}...?`)) return;
+
+                 // We use the date/key to find a match, prioritizing objects with missing invoice numbers
+                 newInvoices = invoices.filter(inv => {
+                    const invNo = String(inv.invoiceNo);
+                    const invDate = String(inv.date);
+                    
+                    // Keep if the invoice number is valid and doesn't match the key (which shouldn't happen here)
+                    if (invNo === key) { 
+                        deletedInvoice = inv;
+                        return false; 
+                    }
+                    
+                    // Keep if the invoice number is valid and defined
+                    if (invNo && invNo !== 'undefined') { 
+                        return true; 
+                    }
+
+                    // Delete if it's corrupted AND its date matches the key (as a secondary check)
+                    if (invDate === key) {
+                        deletedInvoice = inv;
+                        return false; 
+                    }
+                    
+                    // Default behavior: Keep the item if none of the above rules triggered deletion
+                    return true;
+                 });
+                 deletedCount = initialLength - newInvoices.length;
+            }
+
+            if (deletedCount > 0) {
+                // Re-add stock for deleted items (simple reversal)
+                if (deletedInvoice && deletedInvoice.items) {
+                    let inventory = getInventory();
+                    deletedInvoice.items.forEach(itemSold => {
+                        const invIndex = inventory.findIndex(item => item.name === itemSold.name);
+                        if (invIndex !== -1) {
+                             inventory[invIndex].stock = (inventory[invIndex].stock || 0) + itemSold.qty;
+                        }
+                    });
+                    saveInventory(inventory);
+                }
+
+                localStorage.setItem(INVOICES_STORAGE_KEY, JSON.stringify(newInvoices));
+                showMessage(`Invoice(s) deleted. Stock levels adjusted.`);
+                loadInvoices(); // Refresh the list in the modal
+            } else {
+                 showMessage(`Could not find invoice matching identifier: ${key}.`, true);
+            }
+        };
+
+        // --- Header Persistence Logic (Original) ---
+
+        const loadHeaderData = () => {
+            const data = JSON.parse(localStorage.getItem(HEADER_STORAGE_KEY) || '{"name": "Your Shop Name", "address": "123 Main Street, City, Country", "contact": "Ph: (123) 456-7890 | Email: shop@example.com"}');
+            document.getElementById('companyNameDisplay').textContent = data.name;
+            document.getElementById('companyAddressDisplay').textContent = data.address;
+            document.getElementById('companyContactDisplay').textContent = data.contact;
+        };
+
+        const saveHeaderData = (data) => {
+            localStorage.setItem(HEADER_STORAGE_KEY, JSON.stringify(data));
+        };
+
+        window.toggleHeaderEditMode = (isEditing) => {
+            const display = document.getElementById('companyInfoDisplay');
+            const editForm = document.getElementById('companyInfoEdit');
+            
+            if (isEditing) {
+                // Load current values into form
+                document.getElementById('editCompanyName').value = document.getElementById('companyNameDisplay').textContent;
+                document.getElementById('editCompanyAddress').value = document.getElementById('companyAddressDisplay').textContent;
+                document.getElementById('editCompanyContact').value = document.getElementById('companyContactDisplay').textContent;
+                
+                display.classList.add('hidden');
+                editForm.classList.remove('hidden');
+            } else {
+                editForm.classList.add('hidden');
+                display.classList.remove('hidden');
+            }
+        };
+
+        window.enterHeaderEditMode = () => {
+            window.toggleHeaderEditMode(true);
+        };
+
+        window.saveHeaderChanges = () => {
+            const newHeaderData = {
+                name: document.getElementById('editCompanyName').value,
+                address: document.getElementById('editCompanyAddress').value,
+                contact: document.getElementById('editCompanyContact').value
+            };
+            
+            // Update display
+            document.getElementById('companyNameDisplay').textContent = newHeaderData.name;
+            document.getElementById('companyAddressDisplay').textContent = newHeaderData.address;
+            document.getElementById('companyContactDisplay').textContent = newHeaderData.contact;
+            
+            // Save to localStorage
+            saveHeaderData(newHeaderData);
+            
+            // Exit edit mode
+            toggleHeaderEditMode(false);
+            showMessage("Header details saved successfully!");
+        };
+
+        // --- Reports and Dashboard Logic (Updated) ---
+
+        /**
+         * Initializes the dashboard by setting today's date and running the report.
+         */
+        window.loadReportsDashboard = () => {
+            const today = new Date().toISOString().split('T')[0];
+            const dateFilter = document.getElementById('reportDateFilter');
+            
+            // Set date filter to today if it's empty
+            if (!dateFilter.value) {
+                 dateFilter.value = today;
+            }
+           
+            // Ensure the report runs immediately after opening
+            generateReport();
+            document.getElementById('reportsModal').classList.remove('hidden');
+        };
+
+        /**
+         * Calculates and displays daily sales, profit, and low stock items.
+         */
+        window.generateReport = () => {
+            console.log("Generating report..."); // DEBUG: Check console to confirm function is running.
+            
+            const invoices = JSON.parse(localStorage.getItem(INVOICES_STORAGE_KEY) || '[]');
+            const inventory = getInventory();
+            const selectedDate = document.getElementById('reportDateFilter').value;
+            
+            let totalSales = 0;
+            let totalProfit = 0;
+            let invoiceCount = 0;
+
+            // 1. DAILY SALES & PROFIT REPORT
+            const filteredInvoices = invoices.filter(inv => {
+                // inv.date is stored as an ISO string (e.g., "2025-09-29T19:39:15.000Z")
+                const invDate = new Date(inv.date);
+                if (isNaN(invDate)) return false; 
+
+                // Compare the YYYY-MM-DD part of the saved date with the filter input
+                const invDatePart = invDate.toISOString().split('T')[0];
+                return invDatePart === selectedDate;
+            });
+            
+            filteredInvoices.forEach(inv => {
+                totalSales += inv.netAmount || 0;
+                totalProfit += inv.totalProfit || 0; 
+                invoiceCount++;
+            });
+
+            // Update display cards
+            document.getElementById('salesTotalDisplay').textContent = formatCurrency(totalSales);
+            document.getElementById('profitTotalDisplay').textContent = formatCurrency(totalProfit);
+            document.getElementById('invoiceCountDisplay').textContent = invoiceCount;
+            
+            // 2. LOW STOCK REPORT
+            const lowStockList = document.getElementById('lowStockList');
+            lowStockList.innerHTML = '';
+            
+            const lowStockItems = inventory.filter(item => item.stock < 10);
+            
+            if (lowStockItems.length === 0) {
+                lowStockList.innerHTML = '<p class="text-green-600 p-2 font-semibold">✅ All items are well-stocked (Stock ≥ 10).</p>';
+                return;
+            }
+
+            // Render low stock items
+            lowStockItems.sort((a, b) => a.stock - b.stock).forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between items-center p-3 bg-red-50 rounded-lg shadow-sm border border-red-200';
+                
+                itemDiv.innerHTML = `
+                    <div class="text-sm">
+                        <span class="font-bold text-red-700 block">${item.name}</span>
+                        <div class="text-xs text-gray-600">
+                            SKU: ${item.id} | Cost: ${formatCurrency(item.cost)}
+                        </div>
+                    </div>
+                    <div class="font-extrabold text-xl text-red-900">
+                        ${item.stock} left
+                    </div>
+                `;
+                lowStockList.appendChild(itemDiv);
+            });
+        };
+        
+        // --- Initialization ---
+        
+        window.onload = () => {
+            // Load header data before generating the invoice
+            loadHeaderData();
+            
+            // Start a brand new invoice session on load silently
+            generateNewInvoice(true);
+            
+            // This line ensures Lucide icons are rendered after the content is loaded
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            // Load the invoice list once the modal is opened for the first time
+            document.getElementById('loadInvoiceModal').addEventListener('click', loadInvoices);
+        };
+    </script>
+   </body>
+</html>
