@@ -1,9 +1,9 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "devCommand": "npm run dev",
+  "buildCommand": "npm run build:frontend",
+  "outputDirectory": "dist/public",
+  "devCommand": "vite",
   "installCommand": "npm install",
-  "framework": null,
+  "framework": "vite",
   "env": {
     "VITE_SUPABASE_URL": "https://thmdhjmwlksqomebhtgz.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRobWRoam13bGtzcW9tZWJodGd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDAxNjgsImV4cCI6MjA3NDkxNjE2OH0.QQBltt2_PNK5DNxhGGLqQUBoIQ5DHFLZ-t1muv3KITY"
