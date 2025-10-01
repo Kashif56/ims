@@ -55,7 +55,7 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
     <div className="mb-6">
       <h3 className="font-semibold text-lg mb-3">Invoice Items</h3>
       
-      <div className="mb-4 p-4 bg-muted rounded-lg border">
+      <div className="mb-4 p-4 bg-muted rounded-lg border print:hidden">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2 relative">
             <Input

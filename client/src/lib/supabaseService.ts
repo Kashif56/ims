@@ -181,6 +181,24 @@ export const createInvoice = async (
   };
 };
 
+export const deleteInvoice = async (id: string) => {
+  // First delete line items
+  const { error: lineItemsError } = await supabase
+    .from('invoice_line_items')
+    .delete()
+    .eq('invoice_id', id);
+  
+  if (lineItemsError) throw lineItemsError;
+
+  // Then delete invoice
+  const { error: invoiceError } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', id);
+  
+  if (invoiceError) throw invoiceError;
+};
+
 // Generate next invoice number
 export const getNextInvoiceNumber = async () => {
   const { data, error } = await supabase
