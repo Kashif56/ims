@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/Inventory";
 import Invoices from "@/pages/Invoices";
 import ViewInvoice from "@/pages/ViewInvoice";
+import Customers from "@/pages/Customers";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/inventory" component={Inventory} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/invoice/:id" component={ViewInvoice} />
+      <Route path="/customers" component={Customers} />
       <Route component={NotFound} />
     </Switch>
   );

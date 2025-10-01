@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { FileText, Package, BarChart3, Eye } from 'lucide-react';
+import { FileText, Package, BarChart3, Eye, Users } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface LayoutProps {
@@ -49,6 +49,15 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   <Package className="w-4 h-4 mr-2" />
                   Inventory
+                </Button>
+              </Link>
+              <Link href="/customers">
+                <Button 
+                  variant={location === '/customers' ? 'default' : 'outline'} 
+                  size="sm"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Customers
                 </Button>
               </Link>
               <Link href="/dashboard">

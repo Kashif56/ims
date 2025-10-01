@@ -57,6 +57,15 @@ export const updateCustomer = async (id: string, customer: Partial<Customer>) =>
   return data;
 };
 
+export const deleteCustomer = async (id: string) => {
+  const { error } = await supabase
+    .from('customers')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+};
+
 // Inventory Operations
 export const getInventoryItems = async () => {
   const { data, error } = await supabase

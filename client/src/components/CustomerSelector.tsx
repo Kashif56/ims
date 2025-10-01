@@ -52,19 +52,34 @@ export default function CustomerSelector({ customers, selectedCustomer, onSelect
       
       {!selectedCustomer ? (
         <div className="relative print:hidden">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowResults(true);
-                setShowCreateForm(false);
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowResults(true);
+                  setShowCreateForm(false);
+                }}
+                placeholder="Search customer by name or phone..."
+                className="pl-10"
+                data-testid="input-customer-search"
+              />
+            </div>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => {
+                setShowCreateForm(true);
+                setShowResults(false);
+                setSearchQuery('');
               }}
-              placeholder="Search customer by name or phone..."
-              className="pl-10"
-              data-testid="input-customer-search"
-            />
+              data-testid="button-add-customer-quick"
+              title="Add New Customer"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
           </div>
 
           {showResults && searchQuery && (
