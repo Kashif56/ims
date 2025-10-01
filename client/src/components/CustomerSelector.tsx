@@ -78,7 +78,7 @@ export default function CustomerSelector({ customers, selectedCustomer, onSelect
                     data-testid={`customer-option-${customer.id}`}
                   >
                     <div className="font-semibold text-foreground">{customer.name}</div>
-                    <div className="text-sm text-muted-foreground">{customer.phone} • Due: ${customer.currentDue.toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground">{customer.phone} • Due: Rs. {(customer.currentDue || 0).toFixed(2)}</div>
                   </div>
                 ))
               ) : (
@@ -131,7 +131,7 @@ export default function CustomerSelector({ customers, selectedCustomer, onSelect
               <div className="font-bold text-lg" data-testid="text-selected-customer-name">{selectedCustomer.name}</div>
               <div className="text-sm text-muted-foreground">{selectedCustomer.phone}</div>
               <div className="text-sm text-muted-foreground">{selectedCustomer.address}</div>
-              <div className="text-sm font-semibold mt-2" data-testid="text-customer-due">Previous Due: ${selectedCustomer.currentDue.toFixed(2)}</div>
+              <div className="text-sm font-semibold mt-2" data-testid="text-customer-due">Previous Due: Rs. {(selectedCustomer.currentDue || 0).toFixed(2)}</div>
             </div>
             <Button size="sm" variant="outline" onClick={() => onSelectCustomer(null as any)} data-testid="button-change-customer">
               Change

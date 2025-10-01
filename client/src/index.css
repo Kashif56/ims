@@ -343,3 +343,39 @@
     inset: -1px;
   }
 }
+
+/* Print Styles for A4 Portrait Invoice */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1cm;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:inline {
+    display: inline !important;
+  }
+
+  .print\:flex {
+    display: flex !important;
+  }
+
+  /* Ensure proper page breaks */
+  .bg-card {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Prevent page breaks inside important elements */
+  table, tr, td, th {
+    page-break-inside: avoid;
+  }
+}

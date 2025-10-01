@@ -6,17 +6,17 @@ import { Trash2, Plus } from 'lucide-react';
 interface InventoryItem {
   id: string;
   name: string;
-  costPrice: number;
-  stockQuantity: number;
+  cost_price: number;
+  stock_quantity: number;
 }
 
 interface LineItem {
   id: string;
-  itemId: string;
-  name: string;
+  item_id: string;
+  item_name: string;
   quantity: number;
-  salePrice: number;
-  costPrice: number;
+  sale_price: number;
+  cost_price: number;
 }
 
 interface InvoiceLineItemsProps {
@@ -39,11 +39,11 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
   const handleSelectItem = (invItem: InventoryItem) => {
     const lineItem: LineItem = {
       id: Date.now().toString(),
-      itemId: invItem.id,
-      name: invItem.name,
+      item_id: invItem.id,
+      item_name: invItem.name,
       quantity: newItem.quantity,
-      salePrice: newItem.salePrice || invItem.costPrice * 1.2,
-      costPrice: invItem.costPrice,
+      sale_price: newItem.salePrice || invItem.cost_price * 1.2,
+      cost_price: invItem.cost_price,
     };
     onAddItem(lineItem);
     setSearchQuery('');
@@ -77,7 +77,7 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
                     data-testid={`item-option-${item.id}`}
                   >
                     <div className="font-semibold">{item.name}</div>
-                    <div className="text-sm text-muted-foreground">Stock: {item.stockQuantity} • Cost: ${item.costPrice.toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground">Stock: {item.stock_quantity} • Cost: Rs. {item.cost_price.toFixed(2)}</div>
                   </div>
                 ))}
               </div>
@@ -89,6 +89,7 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
             onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 1 })}
             placeholder="Qty"
             min="1"
+            className="text-center"
             data-testid="input-item-quantity"
           />
           <Input
@@ -97,6 +98,7 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
             onChange={(e) => setNewItem({ ...newItem, salePrice: parseFloat(e.target.value) || 0 })}
             placeholder="Sale Price"
             step="0.01"
+            className="text-center"
             data-testid="input-item-price"
           />
         </div>
@@ -123,10 +125,33 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
             ) : (
               items.map((item) => (
                 <tr key={item.id} className="border-t" data-testid={`line-item-${item.id}`}>
-                  <td className="p-3">{item.name}</td>
-                  <td className="p-3 text-center">{item.quantity}</td>
-                  <td className="p-3 text-right">${item.salePrice.toFixed(2)}</td>
-                  <td className="p-3 text-right font-semibold">${(item.quantity * item.salePrice).toFixed(2)}</td>
+                  <td className="p-3">{item.item_name}</td>
+                  <td className="p-3">
+                    <div className="flex justify-center">
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => onUpdateItem(item.id, { ...item, quantity: parseInt(e.target.value) || 1 })}
+                        min="1"
+                        className="w-20 text-center border-0 bg-transparent hover:bg-muted focus:bg-muted transition-colors print:hidden"
+                      />
+                      <span className="hidden print:inline">{item.quantity}</span>
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex justify-end">
+                      <Input
+                        type="number"
+                        value={item.sale_price}
+                        onChange={(e) => onUpdateItem(item.id, { ...item, sale_price: parseFloat(e.target.value) || 0 })}
+                        step="0.01"
+                        min="0"
+                        className="w-28 text-right border-0 bg-transparent hover:bg-muted focus:bg-muted transition-colors print:hidden"
+                      />
+                      <span className="hidden print:inline">Rs. {item.sale_price.toFixed(2)}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-right font-semibold">Rs. {(item.quantity * item.sale_price).toFixed(2)}</td>
                   <td className="p-3 text-center print:hidden">
                     <Button
                       size="icon"
