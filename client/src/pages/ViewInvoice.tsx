@@ -108,29 +108,47 @@ export default function ViewInvoicePage() {
           </div>
 
           {/* Totals */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal (Sales):</span>
-                <span className="font-semibold">Rs. {totalSales.toFixed(2)}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Left Column - Sales Summary */}
+            <div className="bg-muted/50 rounded-lg p-5 space-y-3 border">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-muted-foreground">Subtotal (Sales):</span>
+                <span className="font-semibold text-base">Rs. {totalSales.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-lg border-t pt-3">
-                <span className="font-bold">Total Payable:</span>
-                <span className="font-extrabold text-primary">Rs. {invoice.total_amount.toFixed(2)}</span>
+              {invoice.total_amount > totalSales && (
+                <div className="flex justify-between items-center py-2 border-t">
+                  <span className="text-sm text-muted-foreground">Previous Due Balance:</span>
+                  <span className="font-semibold text-base text-amber-600">Rs. {(invoice.total_amount - totalSales).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center py-3 border-t-2 border-primary/20">
+                <span className="font-bold text-lg">Total Payable:</span>
+                <span className="font-extrabold text-xl text-primary">Rs. {invoice.total_amount.toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex justify-between text-lg border-t pt-3">
-                <span className="font-bold">Cash Paid:</span>
-                <span className="font-extrabold">Rs. {invoice.amount_paid.toFixed(2)}</span>
+            {/* Right Column - Payment Summary */}
+            <div className="bg-muted/50 rounded-lg p-5 space-y-3 border">
+              <div className="flex justify-between items-center py-2">
+                <span className="font-bold text-base">Cash Paid:</span>
+                <span className="font-extrabold text-base text-chart-2">Rs. {invoice.amount_paid.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-lg border-t pt-3">
-                <span className="font-bold">Remaining Due:</span>
-                <span className={`font-extrabold ${invoice.remaining_due > 0 ? 'text-destructive' : 'text-chart-2'}`}>
+              <div className="flex justify-between items-center py-3 border-t-2 border-primary/20">
+                <span className="font-bold text-lg">Remaining Due:</span>
+                <span className={`font-extrabold text-xl ${invoice.remaining_due > 0 ? 'text-destructive' : 'text-chart-2'}`}>
                   Rs. {invoice.remaining_due.toFixed(2)}
                 </span>
               </div>
+              {invoice.remaining_due > 0 && (
+                <div className="text-xs text-center text-muted-foreground pt-2">
+                  Outstanding balance to be paid
+                </div>
+              )}
+              {invoice.remaining_due === 0 && (
+                <div className="text-xs text-center text-chart-2 font-semibold pt-2">
+                  ✓ Fully Paid
+                </div>
+              )}
             </div>
           </div>
 
