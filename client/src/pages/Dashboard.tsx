@@ -1,16 +1,36 @@
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, Package, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAppContext } from '@/context/AppContext';
 import Layout from '@/components/Layout';
+import { DateRangePicker } from '@/components/DateRangePicker';
+import { DateRange } from 'react-day-picker';
+import { isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 export default function DashboardPage() {
   const { savedInvoices, inventory } = useAppContext();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Filter invoices based on date range
+  const filteredInvoices = useMemo(() => {
+    if (!dateRange?.from) {
+      return savedInvoices;
+    }
+
+    return savedInvoices.filter((invoice) => {
+      const invoiceDate = parseISO(invoice.date);
+      const from = startOfDay(dateRange.from!);
+      const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
+
+      return isWithinInterval(invoiceDate, { start: from, end: to });
+    });
+  }, [savedInvoices, dateRange]);
 
   const stats = {
-    totalRevenue: savedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0),
-    totalProfit: savedInvoices.reduce((sum, inv) => sum + (inv.total_amount * 0.15), 0),
-    invoicesToday: savedInvoices.filter(inv => inv.date === new Date().toISOString().split('T')[0]).length,
+    totalRevenue: filteredInvoices.reduce((sum, inv) => sum + inv.total_amount, 0),
+    totalProfit: filteredInvoices.reduce((sum, inv) => sum + (inv.total_amount * 0.15), 0),
+    invoicesToday: filteredInvoices.filter(inv => inv.date === new Date().toISOString().split('T')[0]).length,
     lowStockItems: inventory.filter(item => item.stock_quantity < item.reorder_level).length,
   };
 
@@ -19,6 +39,24 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <p className="text-muted-foreground mt-1">
+                Overview of your business metrics
+                {dateRange?.from && (
+                  <span className="ml-2 text-sm">
+                    ({filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''} in selected range)
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="w-full sm:w-auto sm:min-w-[300px]">
+              <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+            </div>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
@@ -27,7 +65,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-total-revenue">Rs. {stats.totalRevenue.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Overall sales</p>
+              <p className="text-xs text-muted-foreground">{dateRange?.from ? 'Sales in selected period' : 'Overall sales'}</p>
             </CardContent>
           </Card>
 
@@ -38,7 +76,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-chart-2" data-testid="text-total-profit">Rs. {stats.totalProfit.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Net earnings</p>
+              <p className="text-xs text-muted-foreground">{dateRange?.from ? 'Earnings in selected period' : 'Net earnings'}</p>
             </CardContent>
           </Card>
 
@@ -49,7 +87,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-invoices-today">{stats.invoicesToday}</div>
-              <p className="text-xs text-muted-foreground">Transactions made</p>
+              <p className="text-xs text-muted-foreground">{dateRange?.from ? 'Invoices in selected period' : 'Transactions made'}</p>
             </CardContent>
           </Card>
 
