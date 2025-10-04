@@ -14,7 +14,6 @@ import ViewBill from "@/pages/ViewBill";
 import Customers from "@/pages/Customers";
 import ProfitAnalysis from "@/pages/ProfitAnalysis";
 import PaymentHistory from "@/pages/PaymentHistory";
-import CustomerPaymentHistory from "@/pages/CustomerPaymentHistory";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -28,7 +27,6 @@ function Router() {
       <Route path="/customers" component={Customers} />
       <Route path="/profit-analysis" component={ProfitAnalysis} />
       <Route path="/payment-history" component={PaymentHistory} />
-      <Route path="/customer-payments" component={CustomerPaymentHistory} />
       <Route component={NotFound} />
     </Switch>
   );

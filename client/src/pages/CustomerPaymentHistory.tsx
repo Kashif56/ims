@@ -1,23 +1,48 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, CreditCard, DollarSign, Search, Calendar, X } from 'lucide-react';
-import { getPaymentHistoryByCustomer } from '@/lib/supabaseService';
+import { User, CreditCard, DollarSign, Search, Calendar, X, Plus } from 'lucide-react';
+import { getPaymentHistoryByCustomer, createPaymentHistory, updateCustomer } from '@/lib/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { PaymentHistory as PaymentHistoryType } from '@/lib/supabase';
 import { useAppContext } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function CustomerPaymentHistory() {
   const { toast } = useToast();
-  const { customers } = useAppContext();
+  const { customers, setCustomers, refreshData } = useAppContext();
+  const [location] = useLocation();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [payments, setPayments] = useState<PaymentHistoryType[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Check URL parameters for customer ID
+  useEffect(() => {
+    const params = new URLSearchParams(location.split('?')[1]);
+    const customerId = params.get('customer');
+    if (customerId && customers.find(c => c.id === customerId)) {
+      setSelectedCustomerId(customerId);
+    }
+  }, [location, customers]);
 
   const fetchCustomerPayments = async (customerId: string, start?: string, end?: string) => {
     if (!customerId) return;
@@ -65,6 +90,63 @@ export default function CustomerPaymentHistory() {
       fetchCustomerPayments(selectedCustomerId, startDate || undefined, endDate || undefined);
     }
   }, [selectedCustomerId]);
+
+  const handleAddPayment = async () => {
+    if (!selectedCustomerId) return;
+    
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid payment amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+    if (!selectedCustomer) return;
+
+    try {
+      setSaving(true);
+      
+      // Record payment in history
+      await createPaymentHistory({
+        customer_id: selectedCustomerId,
+        customer_name: selectedCustomer.name,
+        amount: amount,
+        payment_type: 'due_payment',
+        notes: paymentNotes || `Manual payment recorded`,
+      });
+
+      // Update customer due balance
+      const newDue = Math.max(0, selectedCustomer.current_due - amount);
+      await updateCustomer(selectedCustomerId, { current_due: newDue });
+
+      // Refresh data
+      await refreshData();
+      await fetchCustomerPayments(selectedCustomerId, startDate || undefined, endDate || undefined);
+
+      toast({
+        title: "Payment Recorded",
+        description: `Payment of Rs. ${amount.toFixed(2)} has been recorded successfully.`,
+      });
+
+      // Reset form
+      setPaymentAmount('');
+      setPaymentNotes('');
+      setAddPaymentOpen(false);
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -181,6 +263,14 @@ export default function CustomerPaymentHistory() {
                         <User className="w-5 h-5" />
                         {selectedCustomer?.name}
                       </span>
+                      <Button
+                        onClick={() => setAddPaymentOpen(true)}
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Payment
+                      </Button>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -332,6 +422,62 @@ export default function CustomerPaymentHistory() {
           </div>
         </div>
       </div>
+
+      {/* Add Payment Dialog */}
+      <Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Record a payment for {selectedCustomer?.name}. Current due: Rs. {selectedCustomer?.current_due.toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment-amount">Payment Amount (Rs.)</Label>
+              <Input
+                id="payment-amount"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                disabled={saving}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="payment-notes">Notes (Optional)</Label>
+              <Textarea
+                id="payment-notes"
+                placeholder="Add any notes about this payment..."
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                disabled={saving}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddPaymentOpen(false);
+                setPaymentAmount('');
+                setPaymentNotes('');
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAddPayment} disabled={saving}>
+              {saving ? 'Recording...' : 'Record Payment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

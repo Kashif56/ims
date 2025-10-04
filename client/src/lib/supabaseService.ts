@@ -158,6 +158,17 @@ export const getInvoiceById = async (id: string) => {
   };
 };
 
+export const getInvoicesByCustomer = async (customerId: string) => {
+  const { data: invoices, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return invoices || [];
+};
+
 export const createInvoice = async (
   invoice: Omit<Invoice, 'id' | 'created_at' | 'updated_at'>,
   lineItems: Omit<InvoiceLineItem, 'id' | 'invoice_id' | 'created_at'>[]
@@ -188,6 +199,18 @@ export const createInvoice = async (
     ...invoiceData,
     lineItems: lineItemsData
   };
+};
+
+export const updateInvoice = async (id: string, updates: Partial<Invoice>) => {
+  const { data, error } = await supabase
+    .from('invoices')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
 };
 
 export const deleteInvoice = async (id: string) => {

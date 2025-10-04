@@ -13,11 +13,13 @@ import {
   Phone, 
   MapPin, 
   DollarSign,
-  User
+  User,
+  History
 } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
+import CustomerPaymentView from '@/components/CustomerPaymentView';
 import { createCustomer, updateCustomer, deleteCustomer } from '@/lib/supabaseService';
 import {
   AlertDialog,
@@ -41,19 +43,28 @@ interface Customer {
 type ViewMode = 'list' | 'card';
 
 export default function CustomersPage() {
-  const { customers, setCustomers } = useAppContext();
+  const { customers, setCustomers, refreshData } = useAppContext();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [selectedCustomerForPayment, setSelectedCustomerForPayment] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     address: '',
     current_due: 0,
   });
+
+  const handleViewPaymentHistory = (customer: Customer) => {
+    setSelectedCustomerForPayment(customer);
+  };
+
+  const handlePaymentRecorded = async () => {
+    await refreshData();
+  };
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -336,6 +347,16 @@ export default function CustomersPage() {
                             </span>
                           </div>
                         </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full mt-3"
+                          onClick={() => handleViewPaymentHistory(customer)}
+                        >
+                          <History className="w-4 h-4 mr-2" />
+                          View Payment History
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -377,6 +398,14 @@ export default function CustomersPage() {
                             </div>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={() => handleViewPaymentHistory(customer)}
+                              title="View Payment History"
+                            >
+                              <History className="w-4 h-4 text-purple-600" />
+                            </Button>
                             <Button 
                               size="icon" 
                               variant="ghost" 
@@ -423,6 +452,15 @@ export default function CustomersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Customer Payment View Modal */}
+      {selectedCustomerForPayment && (
+        <CustomerPaymentView
+          customer={selectedCustomerForPayment}
+          onClose={() => setSelectedCustomerForPayment(null)}
+          onPaymentRecorded={handlePaymentRecorded}
+        />
+      )}
     </Layout>
   );
 }

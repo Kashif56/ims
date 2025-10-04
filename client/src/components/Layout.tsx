@@ -87,15 +87,6 @@ export default function Layout({ children }: LayoutProps) {
                   Payments
                 </Button>
               </Link>
-              <Link href="/customer-payments">
-                <Button 
-                  variant={location === '/customer-payments' ? 'default' : 'outline'} 
-                  size="sm"
-                >
-                  <History className="w-4 h-4 mr-2" />
-                  Customer Pay
-                </Button>
-              </Link>
               <ThemeToggle />
             </div>
           </div>
