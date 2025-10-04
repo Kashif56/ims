@@ -61,3 +61,14 @@ export interface CompanyInfo {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface PaymentHistory {
+  id: string;
+  invoice_id?: string | null;
+  customer_id: string;
+  customer_name: string;
+  amount: number;
+  payment_type: 'invoice_payment' | 'partial_payment' | 'due_payment';
+  notes?: string;
+  created_at?: string;
+}

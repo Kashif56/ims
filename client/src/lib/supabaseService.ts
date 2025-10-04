@@ -1,4 +1,4 @@
-import { supabase, Customer, InventoryItem, Invoice, InvoiceLineItem, CompanyInfo } from './supabase';
+import { supabase, Customer, InventoryItem, Invoice, InvoiceLineItem, CompanyInfo, PaymentHistory } from './supabase';
 
 // Company Info Operations
 export const getCompanyInfo = async () => {
@@ -231,4 +231,131 @@ export const getNextInvoiceNumber = async () => {
   }
 
   return 'INV-00001';
+};
+
+// Payment History Operations
+export const createPaymentHistory = async (payment: Omit<PaymentHistory, 'id' | 'created_at'>) => {
+  const { data, error } = await supabase
+    .from('payment_history')
+    .insert([payment])
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+};
+
+export const getPaymentHistory = async (startDate?: string, endDate?: string) => {
+  let query = supabase
+    .from('payment_history')
+    .select('*');
+  
+  // Apply date filters if provided
+  if (startDate) {
+    query = query.gte('created_at', startDate);
+  }
+  if (endDate) {
+    // Add one day to endDate to include the entire end date
+    const endDateTime = new Date(endDate);
+    endDateTime.setDate(endDateTime.getDate() + 1);
+    query = query.lt('created_at', endDateTime.toISOString());
+  }
+  
+  query = query.order('created_at', { ascending: false });
+  
+  const { data, error } = await query;
+  
+  if (error) throw error;
+  return data || [];
+};
+
+export const getPaymentHistoryByCustomer = async (customerId: string, startDate?: string, endDate?: string) => {
+  let query = supabase
+    .from('payment_history')
+    .select('*')
+    .eq('customer_id', customerId);
+  
+  // Apply date filters if provided
+  if (startDate) {
+    query = query.gte('created_at', startDate);
+  }
+  if (endDate) {
+    // Add one day to endDate to include the entire end date
+    const endDateTime = new Date(endDate);
+    endDateTime.setDate(endDateTime.getDate() + 1);
+    query = query.lt('created_at', endDateTime.toISOString());
+  }
+  
+  query = query.order('created_at', { ascending: false });
+  
+  const { data, error } = await query;
+  
+  if (error) throw error;
+  return data || [];
+};
+
+// Profit Analysis - Get all line items with profit calculation
+export const getProfitAnalysis = async (startDate?: string, endDate?: string) => {
+  let query = supabase
+    .from('invoice_line_items')
+    .select(`
+      *,
+      invoices!inner(date, invoice_number)
+    `);
+  
+  // Apply date filters if provided
+  if (startDate) {
+    query = query.gte('invoices.date', startDate);
+  }
+  if (endDate) {
+    query = query.lte('invoices.date', endDate);
+  }
+  
+  query = query.order('created_at', { ascending: false });
+  
+  const { data: lineItems, error } = await query;
+  
+  if (error) throw error;
+  
+  // Calculate profit for each item
+  const itemsWithProfit = (lineItems || []).map((item: any) => ({
+    ...item,
+    profit: (item.sale_price - item.cost_price) * item.quantity,
+    revenue: item.sale_price * item.quantity,
+    cost: item.cost_price * item.quantity,
+    date: item.invoices?.date,
+    invoice_number: item.invoices?.invoice_number
+  }));
+  
+  return itemsWithProfit;
+};
+
+// Get aggregated profit by product
+export const getProfitByProduct = async (startDate?: string, endDate?: string) => {
+  const profitData = await getProfitAnalysis(startDate, endDate);
+  
+  // Group by item_name and aggregate
+  const productMap = new Map();
+  
+  profitData.forEach((item: any) => {
+    const existing = productMap.get(item.item_name);
+    if (existing) {
+      existing.totalQuantity += item.quantity;
+      existing.totalRevenue += item.revenue;
+      existing.totalCost += item.cost;
+      existing.totalProfit += item.profit;
+      existing.transactionCount += 1;
+    } else {
+      productMap.set(item.item_name, {
+        item_name: item.item_name,
+        totalQuantity: item.quantity,
+        totalRevenue: item.revenue,
+        totalCost: item.cost,
+        totalProfit: item.profit,
+        transactionCount: 1
+      });
+    }
+  });
+  
+  return Array.from(productMap.values()).sort((a, b) => b.totalProfit - a.totalProfit);
 };

@@ -9,7 +9,7 @@ import InvoiceHeader from '@/components/InvoiceHeader';
 import ReceiptPrint from '@/components/ReceiptPrint';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/context/AppContext';
-import { createInvoice, getNextInvoiceNumber, updateCustomer, createCustomer, updateCompanyInfo } from '@/lib/supabaseService';
+import { createInvoice, getNextInvoiceNumber, updateCustomer, createCustomer, updateCompanyInfo, createPaymentHistory } from '@/lib/supabaseService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Customer {
@@ -135,7 +135,19 @@ export default function Home() {
         cost_price: item.cost_price,
       }));
 
-      await createInvoice(billData, lineItemsData);
+      const invoice = await createInvoice(billData, lineItemsData);
+
+      // Record payment history if any payment was made
+      if (cashPaid > 0) {
+        await createPaymentHistory({
+          invoice_id: invoice.id,
+          customer_id: selectedCustomer.id,
+          customer_name: selectedCustomer.name,
+          amount: cashPaid,
+          payment_type: 'invoice_payment',
+          notes: `Payment for invoice ${billNumber}`
+        });
+      }
 
       // Update customer due balance
       await updateCustomer(selectedCustomer.id, { current_due: remainingDue });

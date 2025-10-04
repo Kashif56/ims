@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Receipt, Package, BarChart3, Eye, Users } from 'lucide-react';
+import { Receipt, Package, BarChart3, Eye, Users, TrendingUp, CreditCard, History } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface LayoutProps {
@@ -67,6 +67,33 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Dashboard
+                </Button>
+              </Link>
+              <Link href="/profit-analysis">
+                <Button 
+                  variant={location === '/profit-analysis' ? 'default' : 'outline'} 
+                  size="sm"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Profit
+                </Button>
+              </Link>
+              <Link href="/payment-history">
+                <Button 
+                  variant={location === '/payment-history' ? 'default' : 'outline'} 
+                  size="sm"
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Payments
+                </Button>
+              </Link>
+              <Link href="/customer-payments">
+                <Button 
+                  variant={location === '/customer-payments' ? 'default' : 'outline'} 
+                  size="sm"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Customer Pay
                 </Button>
               </Link>
               <ThemeToggle />
