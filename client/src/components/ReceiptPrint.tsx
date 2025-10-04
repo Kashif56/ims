@@ -60,7 +60,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
           {/* POS Receipt Style */}
           <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg shadow-2xl p-8 print:border-solid print:shadow-none" style={{ background: 'white', color: 'black' }}>
             {/* Header with Receipt Icon */}
-            <div className="text-center mb-6 pb-4 border-b-2 border-dashed border-gray-300">
+            <div className="text-center mb-6 pb-4 border-b-2 border-gray-300">
 
               <h1 className="text-3xl font-black text-gray-900 mb-1 tracking-tight">
                 {companyInfo.name || 'POS SYSTEM'}
@@ -74,7 +74,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
             </div>
 
             {/* Bill Number & Date */}
-            <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200 border-dashed">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-dark uppercase tracking-wide mb-1">
@@ -105,7 +105,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
               <div className="space-y-3">
                 {lineItems.length > 0 ? (
                   lineItems.map((item, index) => (
-                    <div key={item.id} className="border-b border-dashed border-gray-300 pb-3">
+                    <div key={item.id} className="border-b border-gray-300 pb-3">
                       <div className="flex justify-between items-start mb-1">
                         <p className="text-gray-900 flex-1 text-sm">
                           <span className="text-gray-500 mr-2">{index + 1}.</span>
@@ -143,7 +143,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
                   </div>
                 )}
                 
-                <div className="border-t border-dashed border-gray-400 pt-2 mt-2">
+                <div className="border-t border-gray-400 pt-2 mt-2">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">TOTAL:</span>
                     <span className="text-lg font-black text-gray-900">Rs. {totalPayable.toFixed(2)}</span>
@@ -172,10 +172,10 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-4 border-t-2 border-dashed border-gray-300">
+            <div className="text-center pt-4 border-t-2 border-gray-300">
               <p className="text-sm font-semibold text-gray-900 mb-1">Thank You for Your Purchase!</p>
               <p className="text-xs text-gray-600">Please visit again</p>
-              <div className="mt-4 pt-4 border-t border-dashed border-gray-300">
+              <div className="mt-4 pt-4 border-t border-gray-300">
                 <p className="text-xs text-gray-500">
                   This is a computer-generated receipt
                 </p>

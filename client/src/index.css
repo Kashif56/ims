@@ -344,11 +344,12 @@
   }
 }
 
-/* Print Styles for Thermal Paper Roll (80mm) */
+/* Print Styles for Thermal Receipt Printer (80mm) - Professional POS Style */
 @media print {
+  /* Set page size for 80mm thermal paper (standard POS receipt width) */
   @page {
-    size: 80mm auto;
-    margin: 5mm;
+    size: 80mm auto; /* Width 80mm, height auto for continuous roll */
+    margin: 0; /* No margins - thermal printers handle this */
   }
 
   * {
@@ -357,25 +358,28 @@
     color-adjust: exact !important;
   }
 
-  /* Force light theme for printing */
+  /* Force white background and black text for thermal printing */
   html, body {
     background: white !important;
     color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
 
-  /* Override dark mode colors */
+  /* Remove all unnecessary spacing and backgrounds */
   body * {
     background-color: transparent !important;
-    color: inherit !important;
+    color: black !important;
   }
 
-  /* Hide navigation, sidebars, and other UI elements */
+  /* Hide all UI elements except the receipt */
   nav, header, footer, aside, 
   [role="navigation"], 
   [role="banner"],
-  [role="complementary"] {
+  [role="complementary"],
+  button, input, select, textarea {
     display: none !important;
   }
 
@@ -391,75 +395,136 @@
     display: block !important;
   }
 
-  .print\:inline {
-    display: inline !important;
-  }
-
-  .print\:flex {
-    display: flex !important;
-  }
-
-  /* Ensure proper page breaks */
-  .bg-card {
+  /* Remove shadows, borders, and decorative elements */
+  .bg-card, .shadow, .shadow-lg, .shadow-xl, .shadow-2xl {
     box-shadow: none !important;
     border: none !important;
   }
 
   /* Prevent page breaks inside important elements */
-  table, tr, td, th {
-    page-break-inside: avoid;
+  table, tr, td, th, .receipt-item {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  /* Ensure receipt is visible and properly styled */
-  .hidden {
-    display: none !important;
-  }
-
+  /* Ensure receipt is visible */
   .hidden.print\:block,
   .hidden.print\:\!block {
     display: block !important;
   }
-}
 
-/* Thermal Paper Roll Print Styles (80mm width) */
-/* This will be triggered when printing with thermal format */
-@media print {
-  /* Thermal paper specific styles - applied via data attribute */
+  /* Thermal Receipt Specific Styles */
   [data-print-format="thermal"] {
+    width: 80mm !important;
     max-width: 80mm !important;
-    margin: 0 auto !important;
-    padding: 5mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
+  /* Remove all padding and margins from receipt container */
+  [data-print-format="thermal"] > * {
+    margin: 0 !important;
+    padding: 5mm 3mm !important; /* Minimal padding for thermal printer */
+  }
+
+  [data-print-format="thermal"] .customer {
+    border: 1px gray solid !important;
+  }
+
+  /* Optimize font sizes for thermal printing */
   [data-print-format="thermal"] .text-3xl {
-    font-size: 18px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
   }
 
   [data-print-format="thermal"] .text-2xl {
-    font-size: 16px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
   }
 
   [data-print-format="thermal"] .text-lg {
-    font-size: 14px !important;
+    font-size: 13px !important;
+  }
+
+  [data-print-format="thermal"] .text-base {
+    font-size: 12px !important;
   }
 
   [data-print-format="thermal"] .text-sm {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
 
   [data-print-format="thermal"] .text-xs {
     font-size: 9px !important;
   }
 
-  [data-print-format="thermal"] .p-8 {
-    padding: 10px !important;
+  /* Reduce spacing for thermal paper */
+  [data-print-format="thermal"] .p-8,
+  [data-print-format="thermal"] .p-6,
+  [data-print-format="thermal"] .p-4 {
+    padding: 3mm !important;
   }
 
-  [data-print-format="thermal"] .mb-6 {
-    margin-bottom: 12px !important;
+  [data-print-format="thermal"] .mb-6,
+  [data-print-format="thermal"] .mb-4 {
+    margin-bottom: 3mm !important;
   }
 
+  [data-print-format="thermal"] .pb-4,
+  [data-print-format="thermal"] .pb-3 {
+    padding-bottom: 2mm !important;
+  }
+
+  [data-print-format="thermal"] .pt-4,
+  [data-print-format="thermal"] .pt-3 {
+    padding-top: 2mm !important;
+  }
+
+  /* Remove decorative borders and backgrounds */
+  [data-print-format="thermal"] .border-2,
+  [data-print-format="thermal"] .border,
+  [data-print-format="thermal"] .rounded-lg,
+  [data-print-format="thermal"] .shadow-2xl {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Keep only functional borders (dashed separators) */
+  [data-print-format="thermal"] .border-dashed {
+    border-style: dashed !important;
+    border-width: 1px !important;
+    border-color: #000 !important;
+  }
+
+  /* Remove background colors except for important highlights */
+  [data-print-format="thermal"] .bg-gray-50,
+  [data-print-format="thermal"] .bg-muted {
+    background-color: transparent !important;
+  }
+
+  /* Keep important backgrounds visible */
+  [data-print-format="thermal"] .bg-green-50,
+  [data-print-format="thermal"] .bg-green-100 {
+    background-color: #f0f0f0 !important;
+  }
+
+  /* Simplify grid layouts for narrow thermal paper */
   [data-print-format="thermal"] .grid-cols-2 {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Ensure text colors are black for thermal printing */
+  [data-print-format="thermal"] .text-gray-900,
+  [data-print-format="thermal"] .text-gray-800,
+  [data-print-format="thermal"] .text-gray-700,
+  [data-print-format="thermal"] .text-gray-600 {
+    color: #000 !important;
+  }
+
+  /* Make important text bold for thermal printing */
+  [data-print-format="thermal"] .font-black,
+  [data-print-format="thermal"] .font-bold {
+    font-weight: 700 !important;
   }
 }
