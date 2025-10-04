@@ -12,25 +12,25 @@ export default function DashboardPage() {
   const { savedInvoices, inventory } = useAppContext();
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  // Filter invoices based on date range
-  const filteredInvoices = useMemo(() => {
+  // Filter bills based on date range
+  const filteredBills = useMemo(() => {
     if (!dateRange?.from) {
       return savedInvoices;
     }
 
-    return savedInvoices.filter((invoice) => {
-      const invoiceDate = parseISO(invoice.date);
+    return savedInvoices.filter((bill) => {
+      const billDate = parseISO(bill.date);
       const from = startOfDay(dateRange.from!);
       const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
 
-      return isWithinInterval(invoiceDate, { start: from, end: to });
+      return isWithinInterval(billDate, { start: from, end: to });
     });
   }, [savedInvoices, dateRange]);
 
   const stats = {
-    totalRevenue: filteredInvoices.reduce((sum, inv) => sum + inv.total_amount, 0),
-    totalProfit: filteredInvoices.reduce((sum, inv) => sum + (inv.total_amount * 0.15), 0),
-    invoicesToday: filteredInvoices.filter(inv => inv.date === new Date().toISOString().split('T')[0]).length,
+    totalRevenue: filteredBills.reduce((sum, bill) => sum + bill.total_amount, 0),
+    totalProfit: filteredBills.reduce((sum, bill) => sum + (bill.total_amount * 0.15), 0),
+    billsToday: filteredBills.filter(bill => bill.date === new Date().toISOString().split('T')[0]).length,
     lowStockItems: inventory.filter(item => item.stock_quantity < item.reorder_level).length,
   };
 
@@ -47,7 +47,7 @@ export default function DashboardPage() {
                 Overview of your business metrics
                 {dateRange?.from && (
                   <span className="ml-2 text-sm">
-                    ({filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''} in selected range)
+                    ({filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} in selected range)
                   </span>
                 )}
               </p>
@@ -82,12 +82,12 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-              <CardTitle className="text-sm font-medium">Invoices Today</CardTitle>
+              <CardTitle className="text-sm font-medium">Bills Today</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-invoices-today">{stats.invoicesToday}</div>
-              <p className="text-xs text-muted-foreground">{dateRange?.from ? 'Invoices in selected period' : 'Transactions made'}</p>
+              <div className="text-2xl font-bold" data-testid="text-bills-today">{stats.billsToday}</div>
+              <p className="text-xs text-muted-foreground">{dateRange?.from ? 'Bills in selected period' : 'Transactions made'}</p>
             </CardContent>
           </Card>
 

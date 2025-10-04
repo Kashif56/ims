@@ -344,20 +344,51 @@
   }
 }
 
-/* Print Styles for A4 Portrait Invoice */
+/* Print Styles for Thermal Paper Roll (80mm) */
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 1cm;
+    size: 80mm auto;
+    margin: 5mm;
   }
 
-  body {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Force light theme for printing */
+  html, body {
+    background: white !important;
+    color: black !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
 
+  /* Override dark mode colors */
+  body * {
+    background-color: transparent !important;
+    color: inherit !important;
+  }
+
+  /* Hide navigation, sidebars, and other UI elements */
+  nav, header, footer, aside, 
+  [role="navigation"], 
+  [role="banner"],
+  [role="complementary"] {
+    display: none !important;
+  }
+
   .print\:hidden {
     display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+
+  .print\:\!block {
+    display: block !important;
   }
 
   .print\:inline {
@@ -377,5 +408,58 @@
   /* Prevent page breaks inside important elements */
   table, tr, td, th {
     page-break-inside: avoid;
+  }
+
+  /* Ensure receipt is visible and properly styled */
+  .hidden {
+    display: none !important;
+  }
+
+  .hidden.print\:block,
+  .hidden.print\:\!block {
+    display: block !important;
+  }
+}
+
+/* Thermal Paper Roll Print Styles (80mm width) */
+/* This will be triggered when printing with thermal format */
+@media print {
+  /* Thermal paper specific styles - applied via data attribute */
+  [data-print-format="thermal"] {
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 5mm !important;
+  }
+
+  [data-print-format="thermal"] .text-3xl {
+    font-size: 18px !important;
+  }
+
+  [data-print-format="thermal"] .text-2xl {
+    font-size: 16px !important;
+  }
+
+  [data-print-format="thermal"] .text-lg {
+    font-size: 14px !important;
+  }
+
+  [data-print-format="thermal"] .text-sm {
+    font-size: 11px !important;
+  }
+
+  [data-print-format="thermal"] .text-xs {
+    font-size: 9px !important;
+  }
+
+  [data-print-format="thermal"] .p-8 {
+    padding: 10px !important;
+  }
+
+  [data-print-format="thermal"] .mb-6 {
+    margin-bottom: 12px !important;
+  }
+
+  [data-print-format="thermal"] .grid-cols-2 {
+    grid-template-columns: 1fr !important;
   }
 }

@@ -78,9 +78,9 @@ export default function InvoiceHeader({ invoiceNumber, date, companyInfo, onComp
       )}
       
       <div className="text-right">
-        <div className="text-sm text-muted-foreground font-semibold">INVOICE</div>
-        <div className="text-2xl font-bold text-primary" data-testid="text-invoice-number">{invoiceNumber}</div>
-        <div className="text-sm text-muted-foreground mt-1" data-testid="text-invoice-date">Date: {date}</div>
+        <div className="text-sm text-muted-foreground font-semibold">BILL / RECEIPT</div>
+        <div className="text-2xl font-bold text-primary" data-testid="text-bill-number">{invoiceNumber}</div>
+        <div className="text-sm text-muted-foreground mt-1" data-testid="text-bill-date">Date: {date}</div>
       </div>
     </div>
   );

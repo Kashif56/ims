@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { FileText, Package, BarChart3, Eye, Users } from 'lucide-react';
+import { Receipt, Package, BarChart3, Eye, Users } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface LayoutProps {
@@ -18,8 +18,8 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center gap-4 flex-wrap">
             <Link href="/">
               <div className="flex items-center gap-2 cursor-pointer">
-                <FileText className="w-6 h-6 text-primary" />
-                <h1 className="text-xl font-bold text-foreground">Mobile Shop Manager</h1>
+                <Receipt className="w-6 h-6 text-primary" />
+                <h1 className="text-xl font-bold text-foreground">POS System</h1>
               </div>
             </Link>
             
@@ -29,17 +29,17 @@ export default function Layout({ children }: LayoutProps) {
                   variant={location === '/' ? 'default' : 'outline'} 
                   size="sm"
                 >
-                  <FileText className="w-4 h-4 mr-2" />
-                  New Invoice
+                  <Receipt className="w-4 h-4 mr-2" />
+                  New Bill
                 </Button>
               </Link>
-              <Link href="/invoices">
+              <Link href="/bills">
                 <Button 
-                  variant={location === '/invoices' || location.startsWith('/invoice/') ? 'default' : 'outline'} 
+                  variant={location === '/bills' || location.startsWith('/bill/') ? 'default' : 'outline'} 
                   size="sm"
                 >
                   <Eye className="w-4 h-4 mr-2" />
-                  Invoices
+                  Bills
                 </Button>
               </Link>
               <Link href="/inventory">

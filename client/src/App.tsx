@@ -9,8 +9,8 @@ import { SecurityGate } from "@/components/SecurityGate";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/Inventory";
-import Invoices from "@/pages/Invoices";
-import ViewInvoice from "@/pages/ViewInvoice";
+import Bills from "@/pages/Bills";
+import ViewBill from "@/pages/ViewBill";
 import Customers from "@/pages/Customers";
 import NotFound from "@/pages/not-found";
 
@@ -20,8 +20,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/inventory" component={Inventory} />
-      <Route path="/invoices" component={Invoices} />
-      <Route path="/invoice/:id" component={ViewInvoice} />
+      <Route path="/bills" component={Bills} />
+      <Route path="/bill/:id" component={ViewBill} />
       <Route path="/customers" component={Customers} />
       <Route component={NotFound} />
     </Switch>
