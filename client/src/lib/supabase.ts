@@ -51,6 +51,7 @@ export interface InvoiceLineItem {
   quantity: number;
   sale_price: number;
   cost_price: number;
+  returned_quantity?: number;
   created_at?: string;
 }
 

@@ -116,7 +116,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
                         <p className="text-gray-600 text-sm">
                           {item.quantity} × Rs. {item.sale_price.toFixed(2)}
                         </p>
-                        <p className="font-bold text-gray-900 text-sm">
+                        <p className="font-medium text-gray-900 text-lg">
                           Rs. {(item.quantity * item.sale_price).toFixed(2)}
                         </p>
                       </div>

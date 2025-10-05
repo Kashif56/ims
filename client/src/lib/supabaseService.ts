@@ -180,6 +180,19 @@ export const getInvoiceByNumber = async (invoiceNumber: string) => {
   };
 };
 
+// Search invoices by partial invoice number (for autocomplete)
+export const searchInvoicesByNumber = async (searchQuery: string) => {
+  const { data: invoices, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .ilike('invoice_number', `%${searchQuery}%`)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  
+  if (error) throw error;
+  return invoices || [];
+};
+
 export const getInvoicesByCustomer = async (customerId: string) => {
   const { data: invoices, error } = await supabase
     .from('invoices')
@@ -513,6 +526,33 @@ export const createProductReturn = async (
   if (lineItemsError) {
     console.error('Line items insert error:', lineItemsError);
     throw lineItemsError;
+  }
+
+  // Update invoice line items to track returned quantities
+  if (returnData.invoice_id) {
+    for (const item of lineItems) {
+      // Find the corresponding invoice line item
+      const { data: invoiceLineItems, error: fetchLineItemError } = await supabase
+        .from('invoice_line_items')
+        .select('*')
+        .eq('invoice_id', returnData.invoice_id)
+        .eq('item_id', item.item_id)
+        .eq('item_name', item.item_name);
+      
+      if (fetchLineItemError) throw fetchLineItemError;
+      
+      if (invoiceLineItems && invoiceLineItems.length > 0) {
+        const invoiceLineItem = invoiceLineItems[0];
+        const newReturnedQty = (invoiceLineItem.returned_quantity || 0) + item.quantity;
+        
+        const { error: updateLineItemError } = await supabase
+          .from('invoice_line_items')
+          .update({ returned_quantity: newReturnedQty })
+          .eq('id', invoiceLineItem.id);
+        
+        if (updateLineItemError) throw updateLineItemError;
+      }
+    }
   }
 
   // Update inventory quantities - add returned items back to stock

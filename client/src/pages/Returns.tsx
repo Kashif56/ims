@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, Calendar, RotateCcw, Package, User, Phone, FileText, Printer, Check, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getProductReturns, createProductReturn, getNextReturnNumber, getInvoiceByNumber } from '@/lib/supabaseService';
+import { getProductReturns, createProductReturn, getNextReturnNumber, getInvoiceByNumber, searchInvoicesByNumber } from '@/lib/supabaseService';
 import { useAppContext } from '@/context/AppContext';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,7 @@ interface InvoiceLineItem {
   quantity: number;
   sale_price: number;
   cost_price: number;
+  returned_quantity?: number;
 }
 
 interface Invoice {
@@ -83,6 +84,11 @@ export default function ReturnsPage() {
   const [returnNumber, setReturnNumber] = useState('RET-00001');
   const [processing, setProcessing] = useState(false);
   const [lastCreatedReturn, setLastCreatedReturn] = useState<ProductReturnWithItems | null>(null);
+  
+  // Invoice search dropdown state
+  const [invoiceSearchResults, setInvoiceSearchResults] = useState<any[]>([]);
+  const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
+  const [searchingInvoices, setSearchingInvoices] = useState(false);
 
   useEffect(() => {
     fetchReturns();
@@ -114,8 +120,36 @@ export default function ReturnsPage() {
     }
   };
 
-  const handleSearchInvoice = async () => {
-    if (!invoiceNumber.trim()) {
+  // Real-time invoice search
+  const handleInvoiceSearch = async (query: string) => {
+    setInvoiceNumber(query);
+    
+    if (query.trim().length < 2) {
+      setInvoiceSearchResults([]);
+      setShowInvoiceDropdown(false);
+      return;
+    }
+
+    try {
+      setSearchingInvoices(true);
+      const results = await searchInvoicesByNumber(query);
+      setInvoiceSearchResults(results);
+      setShowInvoiceDropdown(results.length > 0);
+    } catch (error) {
+      console.error('Error searching invoices:', error);
+    } finally {
+      setSearchingInvoices(false);
+    }
+  };
+
+  const handleSelectInvoice = async (selectedInvoice: any) => {
+    setInvoiceNumber(selectedInvoice.invoice_number);
+    setShowInvoiceDropdown(false);
+    await loadInvoiceForReturn(selectedInvoice.invoice_number);
+  };
+
+  const loadInvoiceForReturn = async (invNumber: string) => {
+    if (!invNumber.trim()) {
       toast({
         title: "Error",
         description: "Please enter an invoice number.",
@@ -126,12 +160,12 @@ export default function ReturnsPage() {
 
     try {
       setSearchingInvoice(true);
-      const invoices = await getInvoiceByNumber(invoiceNumber);
+      const invoices = await getInvoiceByNumber(invNumber);
       
       if (!invoices) {
         toast({
           title: "Not Found",
-          description: `Invoice ${invoiceNumber} not found.`,
+          description: `Invoice ${invNumber} not found.`,
           variant: "destructive",
         });
         return;
@@ -139,23 +173,44 @@ export default function ReturnsPage() {
 
       setInvoice(invoices as Invoice);
       
-      // Initialize return items from invoice line items
-      const items: ReturnItem[] = (invoices.lineItems || []).map((item: InvoiceLineItem) => ({
-        item_id: item.item_id,
-        item_name: item.item_name,
-        original_quantity: item.quantity,
-        return_quantity: item.quantity, // Default to full quantity
-        sale_price: item.sale_price,
-        cost_price: item.cost_price,
-        selected: false, // Not selected by default
-      }));
+      // Filter out items that have been fully returned
+      const availableItems = (invoices.lineItems || []).filter((item: InvoiceLineItem) => {
+        const returnedQty = item.returned_quantity || 0;
+        const availableQty = item.quantity - returnedQty;
+        return availableQty > 0;
+      });
+
+      if (availableItems.length === 0) {
+        toast({
+          title: "All Items Returned",
+          description: `All items from invoice ${invNumber} have already been returned.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Initialize return items from available invoice line items
+      const items: ReturnItem[] = availableItems.map((item: InvoiceLineItem) => {
+        const returnedQty = item.returned_quantity || 0;
+        const availableQty = item.quantity - returnedQty;
+        
+        return {
+          item_id: item.item_id,
+          item_name: item.item_name,
+          original_quantity: availableQty, // Show only available quantity
+          return_quantity: availableQty, // Default to full available quantity
+          sale_price: item.sale_price,
+          cost_price: item.cost_price,
+          selected: false, // Not selected by default
+        };
+      });
       
       setReturnItems(items);
       setStep('select');
       
       toast({
         title: "Invoice Found",
-        description: `Loaded invoice ${invoiceNumber} with ${items.length} items.`,
+        description: `Loaded invoice ${invNumber} with ${items.length} returnable item(s).`,
       });
     } catch (error) {
       toast({
@@ -166,6 +221,10 @@ export default function ReturnsPage() {
     } finally {
       setSearchingInvoice(false);
     }
+  };
+
+  const handleSearchInvoice = async () => {
+    await loadInvoiceForReturn(invoiceNumber);
   };
 
   const handleToggleItem = (index: number) => {
@@ -317,21 +376,61 @@ export default function ReturnsPage() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Invoice Number</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={invoiceNumber}
-                        onChange={(e) => setInvoiceNumber(e.target.value)}
-                        placeholder="Enter invoice number (e.g., INV-00001)"
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearchInvoice()}
-                        className="text-lg"
-                      />
-                      <Button 
-                        onClick={handleSearchInvoice}
-                        disabled={searchingInvoice}
-                        size="lg"
-                      >
-                        {searchingInvoice ? 'Searching...' : 'Search'}
-                      </Button>
+                    <div className="relative">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Input
+                            value={invoiceNumber}
+                            onChange={(e) => handleInvoiceSearch(e.target.value)}
+                            placeholder="Start typing invoice number..."
+                            onKeyPress={(e) => e.key === 'Enter' && handleSearchInvoice()}
+                            onFocus={() => invoiceNumber.length >= 2 && setShowInvoiceDropdown(true)}
+                            onBlur={() => setTimeout(() => setShowInvoiceDropdown(false), 200)}
+                            className="text-lg"
+                          />
+                          {searchingInvoices && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                            </div>
+                          )}
+                          
+                          {/* Dropdown with search results */}
+                          {showInvoiceDropdown && invoiceSearchResults.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-card border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                              {invoiceSearchResults.map((inv) => (
+                                <div
+                                  key={inv.id}
+                                  onClick={() => handleSelectInvoice(inv)}
+                                  className="p-3 hover:bg-accent cursor-pointer border-b last:border-0"
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-semibold">{inv.invoice_number}</p>
+                                      <p className="text-sm text-muted-foreground">{inv.customer_name}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm font-semibold">Rs. {inv.total_amount.toFixed(2)}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {new Date(inv.date).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <Button 
+                          onClick={handleSearchInvoice}
+                          disabled={searchingInvoice}
+                          size="lg"
+                        >
+                          {searchingInvoice ? 'Loading...' : 'Load'}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Type at least 2 characters to search
+                      </p>
                     </div>
                   </div>
                 </CardContent>
