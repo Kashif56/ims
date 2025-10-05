@@ -18,6 +18,7 @@ export interface InventoryItem {
   name: string;
   sku: string;
   cost_price: number;
+  retail_price: number;
   stock_quantity: number;
   reorder_level: number;
   created_at?: string;
@@ -70,5 +71,32 @@ export interface PaymentHistory {
   amount: number;
   payment_type: 'invoice_payment' | 'partial_payment' | 'due_payment';
   notes?: string;
+  created_at?: string;
+}
+
+export interface ProductReturn {
+  id: string;
+  return_number: string;
+  invoice_id?: string | null;
+  invoice_number?: string;
+  customer_id?: string | null;
+  customer_name: string;
+  customer_phone?: string;
+  return_date: string;
+  total_items: number;
+  refund_amount: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ReturnLineItem {
+  id: string;
+  return_id: string;
+  item_id?: string | null;
+  item_name: string;
+  quantity: number;
+  sale_price: number;
+  cost_price: number;
   created_at?: string;
 }

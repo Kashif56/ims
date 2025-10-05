@@ -13,8 +13,11 @@ import Inventory from "@/pages/Inventory";
 import Bills from "@/pages/Bills";
 import ViewBill from "@/pages/ViewBill";
 import Customers from "@/pages/Customers";
+import CustomerPurchaseHistory from "@/pages/CustomerPurchaseHistory";
 import ProfitAnalysis from "@/pages/ProfitAnalysis";
 import PaymentHistory from "@/pages/PaymentHistory";
+import Returns from "@/pages/Returns";
+import ViewReturn from "@/pages/ViewReturn";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,8 +29,11 @@ function Router() {
       <Route path="/bills" component={Bills} />
       <Route path="/bill/:id" component={ViewBill} />
       <Route path="/customers" component={Customers} />
+      <Route path="/customer/:id/purchases" component={CustomerPurchaseHistory} />
       <Route path="/profit-analysis" component={ProfitAnalysis} />
       <Route path="/payment-history" component={PaymentHistory} />
+      <Route path="/returns" component={Returns} />
+      <Route path="/return/:id" component={ViewReturn} />
       <Route component={NotFound} />
     </Switch>
   );

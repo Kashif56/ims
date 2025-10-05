@@ -1,0 +1,600 @@
+import { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Search, Calendar, RotateCcw, Package, User, Phone, FileText, Plus, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { getProductReturns, createProductReturn, getNextReturnNumber, getInvoices } from '@/lib/supabaseService';
+import { useAppContext } from '@/context/AppContext';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface ReturnItem {
+  item_id: string | null;
+  item_name: string;
+  quantity: number;
+  sale_price: number;
+  cost_price: number;
+}
+
+interface ProductReturnWithItems {
+  id: string;
+  return_number: string;
+  invoice_id?: string | null;
+  invoice_number?: string;
+  customer_id?: string | null;
+  customer_name: string;
+  customer_phone?: string;
+  return_date: string;
+  total_items: number;
+  notes?: string;
+  created_at?: string;
+  lineItems?: ReturnItem[];
+}
+
+export default function ReturnsPage() {
+  const { toast } = useToast();
+  const { customers, inventory, refreshData } = useAppContext();
+  const [returns, setReturns] = useState<ProductReturnWithItems[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // New return form state
+  const [returnNumber, setReturnNumber] = useState('RET-00001');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [showCustomerResults, setShowCustomerResults] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState('');
+  const [returnDate, setReturnDate] = useState(new Date().toISOString().split('T')[0]);
+  const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
+  const [notes, setNotes] = useState('');
+  const [invoices, setInvoices] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchReturns();
+    fetchInvoices();
+  }, []);
+
+  const fetchReturns = async () => {
+    try {
+      setLoading(true);
+      const data = await getProductReturns();
+      setReturns(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch returns.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchInvoices = async () => {
+    try {
+      const data = await getInvoices();
+      setInvoices(data);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    }
+  };
+
+  const handleOpenDialog = async () => {
+    try {
+      const nextNumber = await getNextReturnNumber();
+      setReturnNumber(nextNumber);
+      setIsDialogOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate return number.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddReturnItem = () => {
+    setReturnItems([...returnItems, {
+      item_id: null,
+      item_name: '',
+      quantity: 1,
+      sale_price: 0,
+      cost_price: 0,
+    }]);
+  };
+
+  const handleRemoveReturnItem = (index: number) => {
+    setReturnItems(returnItems.filter((_, i) => i !== index));
+  };
+
+  const handleReturnItemChange = (index: number, field: keyof ReturnItem, value: any) => {
+    const newItems = [...returnItems];
+    newItems[index] = { ...newItems[index], [field]: value };
+
+    // If item is selected from inventory, auto-fill prices
+    if (field === 'item_id' && value) {
+      const inventoryItem = inventory.find(item => item.id === value);
+      if (inventoryItem) {
+        newItems[index].item_name = inventoryItem.name;
+        newItems[index].cost_price = inventoryItem.cost_price;
+      }
+    }
+
+    setReturnItems(newItems);
+  };
+
+  const handleSelectCustomer = (customerId: string) => {
+    setSelectedCustomer(customerId);
+    setCustomerSearchQuery('');
+    setShowCustomerResults(false);
+  };
+
+  const handleSubmitReturn = async () => {
+    if (!selectedCustomer) {
+      toast({
+        title: "Error",
+        description: "Please select a customer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (returnItems.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one item to return.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate all items have required fields
+    const invalidItems = returnItems.filter(item => 
+      !item.item_name || item.quantity <= 0 || item.sale_price < 0 || item.cost_price < 0
+    );
+
+    if (invalidItems.length > 0) {
+      toast({
+        title: "Error",
+        description: "Please fill in all item details correctly.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const customer = customers.find(c => c.id === selectedCustomer);
+      const invoice = selectedInvoice ? invoices.find(inv => inv.id === selectedInvoice) : null;
+
+      const totalItems = returnItems.reduce((sum, item) => sum + item.quantity, 0);
+
+      await createProductReturn(
+        {
+          return_number: returnNumber,
+          invoice_id: selectedInvoice || null,
+          invoice_number: invoice?.invoice_number || undefined,
+          customer_id: selectedCustomer,
+          customer_name: customer?.name || '',
+          customer_phone: customer?.phone || undefined,
+          return_date: returnDate,
+          total_items: totalItems,
+          notes: notes || undefined,
+        },
+        returnItems
+      );
+
+      toast({
+        title: "Return Created",
+        description: `Return ${returnNumber} has been created successfully and inventory has been updated.`,
+      });
+
+      // Reset form
+      setIsDialogOpen(false);
+      setSelectedCustomer('');
+      setCustomerSearchQuery('');
+      setShowCustomerResults(false);
+      setSelectedInvoice('');
+      setReturnDate(new Date().toISOString().split('T')[0]);
+      setReturnItems([]);
+      setNotes('');
+
+      // Refresh data
+      await fetchReturns();
+      await refreshData();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create return.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredReturns = returns.filter(returnRecord => {
+    const matchesSearch = returnRecord.return_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          returnRecord.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (returnRecord.invoice_number && returnRecord.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesDate = !dateFilter || returnRecord.return_date.includes(dateFilter);
+    return matchesSearch && matchesDate;
+  });
+
+  const customerInvoices = selectedCustomer 
+    ? invoices.filter(inv => inv.customer_id === selectedCustomer)
+    : [];
+
+  const filteredCustomersForSearch = customers.filter(c => 
+    c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+    c.phone.includes(customerSearchQuery)
+  );
+
+  const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
+
+  return (
+    <Layout>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Product Returns</h1>
+            <p className="text-muted-foreground">Manage product returns and track returned inventory</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleOpenDialog}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Return
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create Product Return</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {/* Return Number and Date */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Return Number</Label>
+                    <Input value={returnNumber} disabled />
+                  </div>
+                  <div>
+                    <Label>Return Date</Label>
+                    <Input 
+                      type="date" 
+                      value={returnDate}
+                      onChange={(e) => setReturnDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Customer Selection */}
+                <div>
+                  <Label>Customer *</Label>
+                  {!selectedCustomer ? (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          value={customerSearchQuery}
+                          onChange={(e) => {
+                            setCustomerSearchQuery(e.target.value);
+                            setShowCustomerResults(true);
+                          }}
+                          placeholder="Search customer by name or phone..."
+                          className="pl-10"
+                        />
+                      </div>
+                      {showCustomerResults && customerSearchQuery && (
+                        <div className="absolute z-50 w-full mt-2 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCustomersForSearch.length > 0 ? (
+                            filteredCustomersForSearch.map((customer) => (
+                              <div
+                                key={customer.id}
+                                onClick={() => handleSelectCustomer(customer.id)}
+                                className="p-3 hover:bg-accent cursor-pointer border-b last:border-0"
+                              >
+                                <div className="font-semibold">{customer.name}</div>
+                                <div className="text-sm text-muted-foreground">{customer.phone}</div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-4 text-center text-muted-foreground">
+                              No customer found
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-muted rounded-lg border flex justify-between items-center">
+                      <div>
+                        <div className="font-semibold">{selectedCustomerData?.name}</div>
+                        <div className="text-sm text-muted-foreground">{selectedCustomerData?.phone}</div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedCustomer('');
+                          setSelectedInvoice('');
+                        }}
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Invoice Selection (Optional) */}
+                {selectedCustomer && (
+                  <div>
+                    <Label>Related Invoice (Optional)</Label>
+                    <Select value={selectedInvoice} onValueChange={setSelectedInvoice}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select invoice (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {customerInvoices.map(invoice => (
+                          <SelectItem key={invoice.id} value={invoice.id}>
+                            {invoice.invoice_number} - {new Date(invoice.date).toLocaleDateString()} - ${invoice.total_amount.toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Return Items */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <Label>Return Items *</Label>
+                    <Button type="button" size="sm" onClick={handleAddReturnItem}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Item
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {returnItems.map((item, index) => (
+                      <Card key={index}>
+                        <CardContent className="pt-4">
+                          <div className="grid grid-cols-12 gap-2 items-end">
+                            <div className="col-span-4">
+                              <Label className="text-xs">Item</Label>
+                              <Select 
+                                value={item.item_id || ''} 
+                                onValueChange={(value) => handleReturnItemChange(index, 'item_id', value || null)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select or enter manually" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">Manual Entry</SelectItem>
+                                  {inventory.map(invItem => (
+                                    <SelectItem key={invItem.id} value={invItem.id}>
+                                      {invItem.name} (Stock: {invItem.stock_quantity})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {!item.item_id && (
+                              <div className="col-span-3">
+                                <Label className="text-xs">Item Name</Label>
+                                <Input
+                                  value={item.item_name}
+                                  onChange={(e) => handleReturnItemChange(index, 'item_name', e.target.value)}
+                                  placeholder="Item name"
+                                />
+                              </div>
+                            )}
+                            <div className={item.item_id ? "col-span-2" : "col-span-2"}>
+                              <Label className="text-xs">Quantity</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => handleReturnItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div className={item.item_id ? "col-span-2" : "col-span-2"}>
+                              <Label className="text-xs">Sale Price</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.sale_price}
+                                onChange={(e) => handleReturnItemChange(index, 'sale_price', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div className={item.item_id ? "col-span-2" : "col-span-2"}>
+                              <Label className="text-xs">Cost Price</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.cost_price}
+                                onChange={(e) => handleReturnItemChange(index, 'cost_price', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleRemoveReturnItem(index)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {returnItems.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No items added. Click "Add Item" to add return items.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <Label>Notes (Optional)</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add any notes about this return..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Summary */}
+                {returnItems.length > 0 && (
+                  <Card className="bg-muted">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total Items:</span>
+                        <span className="text-lg font-bold">
+                          {returnItems.reduce((sum, item) => sum + item.quantity, 0)}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmitReturn} disabled={saving}>
+                    {saving ? 'Creating...' : 'Create Return'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-card border rounded-lg shadow-sm p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search return #, invoice #, or customer..."
+                className="pl-10"
+              />
+            </div>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Returns List */}
+        <div className="grid grid-cols-1 gap-4">
+          {loading ? (
+            <div className="bg-card border rounded-lg shadow-sm p-12 text-center">
+              <p className="text-muted-foreground">Loading returns...</p>
+            </div>
+          ) : filteredReturns.length === 0 ? (
+            <div className="bg-card border rounded-lg shadow-sm p-12 text-center">
+              <RotateCcw className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">No returns found</p>
+            </div>
+          ) : (
+            filteredReturns.map((returnRecord) => (
+              <Card key={returnRecord.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <RotateCcw className="w-5 h-5 text-primary" />
+                        {returnRecord.return_number}
+                      </CardTitle>
+                      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(returnRecord.return_date).toLocaleDateString()}
+                        </div>
+                        {returnRecord.invoice_number && (
+                          <div className="flex items-center gap-1">
+                            <FileText className="w-4 h-4" />
+                            Invoice: {returnRecord.invoice_number}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant="secondary">
+                      {returnRecord.total_items} {returnRecord.total_items === 1 ? 'item' : 'items'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-medium">{returnRecord.customer_name}</span>
+                      {returnRecord.customer_phone && (
+                        <>
+                          <Phone className="w-4 h-4 text-muted-foreground ml-2" />
+                          <span className="text-muted-foreground">{returnRecord.customer_phone}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {returnRecord.lineItems && returnRecord.lineItems.length > 0 && (
+                      <div className="border-t pt-3">
+                        <div className="text-sm font-medium mb-2 flex items-center gap-2">
+                          <Package className="w-4 h-4" />
+                          Returned Items:
+                        </div>
+                        <div className="space-y-1">
+                          {returnRecord.lineItems.map((item, idx) => (
+                            <div key={idx} className="text-sm text-muted-foreground pl-6">
+                              • {item.item_name} - Qty: {item.quantity} @ ${item.sale_price.toFixed(2)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {returnRecord.notes && (
+                      <div className="border-t pt-3">
+                        <div className="text-sm">
+                          <span className="font-medium">Notes: </span>
+                          <span className="text-muted-foreground">{returnRecord.notes}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+}

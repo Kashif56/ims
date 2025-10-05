@@ -10,6 +10,7 @@ interface InventoryItem {
   name: string;
   sku: string;
   costPrice: number;
+  retailPrice: number;
   stockQuantity: number;
   reorderLevel: number;
 }
@@ -30,6 +31,7 @@ export default function InventoryModal({ open, onOpenChange, items, onAddItem, o
     name: '',
     sku: '',
     costPrice: 0,
+    retailPrice: 0,
     stockQuantity: 0,
     reorderLevel: 10,
   });
@@ -45,7 +47,7 @@ export default function InventoryModal({ open, onOpenChange, items, onAddItem, o
     } else {
       onAddItem(formData);
     }
-    setFormData({ name: '', sku: '', costPrice: 0, stockQuantity: 0, reorderLevel: 10 });
+    setFormData({ name: '', sku: '', costPrice: 0, retailPrice: 0, stockQuantity: 0, reorderLevel: 10 });
     setEditingId(null);
   };
 
@@ -55,6 +57,7 @@ export default function InventoryModal({ open, onOpenChange, items, onAddItem, o
       name: item.name,
       sku: item.sku,
       costPrice: item.costPrice,
+      retailPrice: item.retailPrice,
       stockQuantity: item.stockQuantity,
       reorderLevel: item.reorderLevel,
     });
@@ -62,7 +65,7 @@ export default function InventoryModal({ open, onOpenChange, items, onAddItem, o
 
   const handleCancel = () => {
     setEditingId(null);
-    setFormData({ name: '', sku: '', costPrice: 0, stockQuantity: 0, reorderLevel: 10 });
+    setFormData({ name: '', sku: '', costPrice: 0, retailPrice: 0, stockQuantity: 0, reorderLevel: 10 });
   };
 
   return (
@@ -107,6 +110,18 @@ export default function InventoryModal({ open, onOpenChange, items, onAddItem, o
                 onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })}
                 step="0.01"
                 data-testid="input-inventory-cost"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="itemRetail">Retail Price</Label>
+              <Input
+                id="itemRetail"
+                type="number"
+                value={formData.retailPrice}
+                onChange={(e) => setFormData({ ...formData, retailPrice: parseFloat(e.target.value) || 0 })}
+                step="0.01"
+                data-testid="input-inventory-retail"
               />
             </div>
 
@@ -174,7 +189,7 @@ export default function InventoryModal({ open, onOpenChange, items, onAddItem, o
                         <span className={`font-semibold ${item.stockQuantity < item.reorderLevel ? 'text-destructive' : 'text-chart-2'}`}>
                           {item.stockQuantity}
                         </span>
-                        <span className="text-muted-foreground"> • Cost: ${item.costPrice.toFixed(2)}</span>
+                        <span className="text-muted-foreground"> • Cost: Rs. {item.costPrice.toFixed(2)} • Retail: Rs. {item.retailPrice.toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="flex gap-1">

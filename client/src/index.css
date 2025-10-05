@@ -1,7 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+@import "tailwindcss";
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);
@@ -424,7 +421,7 @@
   /* Remove all padding and margins from receipt container */
   [data-print-format="thermal"] > * {
     margin: 0 !important;
-    padding: 5mm 3mm !important; /* Minimal padding for thermal printer */
+    padding: 0 !important; /* Minimal padding for thermal printer */
   }
 
   [data-print-format="thermal"] .customer {

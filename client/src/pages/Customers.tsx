@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -14,7 +15,8 @@ import {
   MapPin, 
   DollarSign,
   User,
-  History
+  History,
+  ShoppingCart
 } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
@@ -348,15 +350,27 @@ export default function CustomersPage() {
                           </div>
                         </div>
                         
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full mt-3"
-                          onClick={() => handleViewPaymentHistory(customer)}
-                        >
-                          <History className="w-4 h-4 mr-2" />
-                          View Payment History
-                        </Button>
+                        <div className="flex gap-2 mt-3">
+                          <Link href={`/customer/${customer.id}/purchases`} className="flex-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                            >
+                              <ShoppingCart className="w-4 h-4 mr-2" />
+                              Purchase History
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleViewPaymentHistory(customer)}
+                          >
+                            <History className="w-4 h-4 mr-2" />
+                            Payments
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -398,6 +412,15 @@ export default function CustomersPage() {
                             </div>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
+                            <Link href={`/customer/${customer.id}/purchases`}>
+                              <Button 
+                                size="icon" 
+                                variant="ghost"
+                                title="View Purchase History"
+                              >
+                                <ShoppingCart className="w-4 h-4 text-green-600" />
+                              </Button>
+                            </Link>
                             <Button 
                               size="icon" 
                               variant="ghost" 

@@ -19,6 +19,7 @@ interface InventoryItem {
   name: string;
   sku: string;
   cost_price: number;
+  retail_price: number;
   stock_quantity: number;
   reorder_level: number;
 }

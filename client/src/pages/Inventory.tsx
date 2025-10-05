@@ -13,6 +13,7 @@ interface InventoryItem {
   name: string;
   sku: string;
   cost_price: number;
+  retail_price: number;
   stock_quantity: number;
   reorder_level: number;
 }
@@ -26,6 +27,7 @@ export default function InventoryPage() {
     name: '',
     sku: '',
     cost_price: 0,
+    retail_price: 0,
     stock_quantity: 0,
     reorder_level: 10,
   });
@@ -52,7 +54,7 @@ export default function InventoryPage() {
           description: `${formData.name} has been added to inventory.`,
         });
       }
-      setFormData({ name: '', sku: '', cost_price: 0, stock_quantity: 0, reorder_level: 10 });
+      setFormData({ name: '', sku: '', cost_price: 0, retail_price: 0, stock_quantity: 0, reorder_level: 10 });
       setEditingId(null);
     } catch (error) {
       toast({
@@ -86,6 +88,7 @@ export default function InventoryPage() {
       name: item.name,
       sku: item.sku,
       cost_price: item.cost_price,
+      retail_price: item.retail_price,
       stock_quantity: item.stock_quantity,
       reorder_level: item.reorder_level,
     });
@@ -93,7 +96,7 @@ export default function InventoryPage() {
 
   const handleCancel = () => {
     setEditingId(null);
-    setFormData({ name: '', sku: '', cost_price: 0, stock_quantity: 0, reorder_level: 10 });
+    setFormData({ name: '', sku: '', cost_price: 0, retail_price: 0, stock_quantity: 0, reorder_level: 10 });
   };
 
   return (
@@ -134,6 +137,18 @@ export default function InventoryPage() {
                 onChange={(e) => setFormData({ ...formData, cost_price: parseFloat(e.target.value) || 0 })}
                 step="0.01"
                 data-testid="input-inventory-cost"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="itemRetail">Retail Price</Label>
+              <Input
+                id="itemRetail"
+                type="number"
+                value={formData.retail_price}
+                onChange={(e) => setFormData({ ...formData, retail_price: parseFloat(e.target.value) || 0 })}
+                step="0.01"
+                data-testid="input-inventory-retail"
               />
             </div>
 
@@ -201,7 +216,7 @@ export default function InventoryPage() {
                         <span className={`font-semibold ${item.stock_quantity < item.reorder_level ? 'text-destructive' : 'text-chart-2'}`}>
                           {item.stock_quantity}
                         </span>
-                        <span className="text-muted-foreground"> • Cost: Rs. {item.cost_price.toFixed(2)}</span>
+                        <span className="text-muted-foreground"> • Cost: Rs. {item.cost_price.toFixed(2)} • Retail: Rs. {item.retail_price.toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="flex gap-1">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Receipt, Trash2, User, DollarSign, ShoppingCart, Printer } from 'lucide-react';
+import { Receipt, Trash2, User, DollarSign, ShoppingCart, Printer, RotateCcw } from 'lucide-react';
 import Layout from '@/components/Layout';
 import CustomerSelector from '@/components/CustomerSelector';
 import InvoiceLineItems from '@/components/InvoiceLineItems';
@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/context/AppContext';
 import { createInvoice, getNextInvoiceNumber, updateCustomer, createCustomer, updateCompanyInfo, createPaymentHistory } from '@/lib/supabaseService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useLocation } from 'wouter';
 
 interface Customer {
   id: string;
@@ -25,6 +26,7 @@ interface InventoryItem {
   name: string;
   sku: string;
   cost_price: number;
+  retail_price: number;
   stock_quantity: number;
   reorder_level: number;
 }
@@ -41,6 +43,7 @@ interface LineItem {
 export default function Home() {
   const { toast } = useToast();
   const { customers, setCustomers, inventory, companyInfo, setCompanyInfo, refreshData } = useAppContext();
+  const [, setLocation] = useLocation();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -439,6 +442,24 @@ export default function Home() {
                       </span>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Access - Returns */}
+              <Card className="border-2 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
+                <CardContent className="pt-4">
+                  <Button 
+                    onClick={() => setLocation('/returns')}
+                    variant="outline"
+                    size="lg"
+                    className="w-full border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                  >
+                    <RotateCcw className="w-5 h-5 mr-2" />
+                    Process Return
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    Handle product returns and refunds
+                  </p>
                 </CardContent>
               </Card>
             </div>

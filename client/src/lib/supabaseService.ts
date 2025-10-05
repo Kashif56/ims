@@ -1,4 +1,4 @@
-import { supabase, Customer, InventoryItem, Invoice, InvoiceLineItem, CompanyInfo, PaymentHistory } from './supabase';
+import { supabase, Customer, InventoryItem, Invoice, InvoiceLineItem, CompanyInfo, PaymentHistory, ProductReturn, ReturnLineItem } from './supabase';
 
 // Company Info Operations
 export const getCompanyInfo = async () => {
@@ -149,6 +149,28 @@ export const getInvoiceById = async (id: string) => {
     .from('invoice_line_items')
     .select('*')
     .eq('invoice_id', id);
+  
+  if (lineItemsError) throw lineItemsError;
+
+  return {
+    ...invoice,
+    lineItems: lineItems || []
+  };
+};
+
+export const getInvoiceByNumber = async (invoiceNumber: string) => {
+  const { data: invoice, error: invoiceError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('invoice_number', invoiceNumber)
+    .single();
+  
+  if (invoiceError) throw invoiceError;
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from('invoice_line_items')
+    .select('*')
+    .eq('invoice_id', invoice.id);
   
   if (lineItemsError) throw lineItemsError;
 
@@ -381,4 +403,195 @@ export const getProfitByProduct = async (startDate?: string, endDate?: string) =
   });
   
   return Array.from(productMap.values()).sort((a, b) => b.totalProfit - a.totalProfit);
+};
+
+// Product Returns Operations
+export const getProductReturns = async (startDate?: string, endDate?: string) => {
+  let query = supabase
+    .from('product_returns')
+    .select('*');
+  
+  // Apply date filters if provided
+  if (startDate) {
+    query = query.gte('return_date', startDate);
+  }
+  if (endDate) {
+    query = query.lte('return_date', endDate);
+  }
+  
+  query = query.order('created_at', { ascending: false });
+  
+  const { data: returns, error } = await query;
+  
+  if (error) throw error;
+  
+  if (!returns || returns.length === 0) return [];
+  
+  // Fetch line items for all returns
+  const returnIds = returns.map(ret => ret.id);
+  const { data: allLineItems, error: lineItemsError } = await supabase
+    .from('return_line_items')
+    .select('*')
+    .in('return_id', returnIds);
+  
+  if (lineItemsError) throw lineItemsError;
+  
+  // Map line items to their respective returns
+  return returns.map(returnRecord => ({
+    ...returnRecord,
+    lineItems: allLineItems?.filter(item => item.return_id === returnRecord.id) || []
+  }));
+};
+
+export const getProductReturnById = async (id: string) => {
+  const { data: returnData, error: returnError } = await supabase
+    .from('product_returns')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (returnError) throw returnError;
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from('return_line_items')
+    .select('*')
+    .eq('return_id', id);
+  
+  if (lineItemsError) throw lineItemsError;
+
+  return {
+    ...returnData,
+    lineItems: lineItems || []
+  };
+};
+
+export const createProductReturn = async (
+  returnData: Omit<ProductReturn, 'id' | 'created_at' | 'updated_at'>,
+  lineItems: Omit<ReturnLineItem, 'id' | 'return_id' | 'created_at'>[]
+) => {
+  // Clean the return data to only include valid database columns
+  const cleanReturnData = {
+    return_number: returnData.return_number,
+    invoice_id: returnData.invoice_id || null,
+    invoice_number: returnData.invoice_number || null,
+    customer_id: returnData.customer_id || null,
+    customer_name: returnData.customer_name,
+    customer_phone: returnData.customer_phone || null,
+    return_date: returnData.return_date,
+    total_items: returnData.total_items,
+    refund_amount: returnData.refund_amount,
+    notes: returnData.notes || null,
+  };
+
+  // Insert return record
+  const { data: returnRecord, error: returnError } = await supabase
+    .from('product_returns')
+    .insert(cleanReturnData)
+    .select()
+    .single();
+  
+  if (returnError) {
+    console.error('Return insert error:', returnError);
+    throw returnError;
+  }
+
+  // Insert line items - clean data to match schema
+  const cleanLineItems = lineItems.map(item => ({
+    return_id: returnRecord.id,
+    item_id: item.item_id || null,
+    item_name: item.item_name,
+    quantity: item.quantity,
+    sale_price: item.sale_price,
+    cost_price: item.cost_price,
+  }));
+
+  const { data: lineItemsData, error: lineItemsError } = await supabase
+    .from('return_line_items')
+    .insert(cleanLineItems)
+    .select();
+  
+  if (lineItemsError) {
+    console.error('Line items insert error:', lineItemsError);
+    throw lineItemsError;
+  }
+
+  // Update inventory quantities - add returned items back to stock
+  for (const item of lineItems) {
+    if (item.item_id) {
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('inventory_items')
+        .select('stock_quantity')
+        .eq('id', item.item_id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const { error: updateError } = await supabase
+        .from('inventory_items')
+        .update({ stock_quantity: currentItem.stock_quantity + item.quantity })
+        .eq('id', item.item_id);
+      
+      if (updateError) throw updateError;
+    }
+  }
+
+  // Handle refund payment adjustment
+  if (returnData.refund_amount > 0 && returnData.customer_id) {
+    // Reduce customer's due by refund amount (they owe less now)
+    const { data: customer, error: customerFetchError } = await supabase
+      .from('customers')
+      .select('current_due')
+      .eq('id', returnData.customer_id)
+      .single();
+    
+    if (customerFetchError) throw customerFetchError;
+    
+    const newDue = customer.current_due - returnData.refund_amount;
+    
+    const { error: customerUpdateError } = await supabase
+      .from('customers')
+      .update({ current_due: newDue })
+      .eq('id', returnData.customer_id);
+    
+    if (customerUpdateError) throw customerUpdateError;
+
+    // Create payment history entry for the refund
+    await createPaymentHistory({
+      invoice_id: returnData.invoice_id || null,
+      customer_id: returnData.customer_id,
+      customer_name: returnData.customer_name,
+      amount: -returnData.refund_amount, // Negative amount for refund
+      payment_type: 'due_payment',
+      notes: `Refund for return ${returnData.return_number}${returnData.notes ? ': ' + returnData.notes : ''}`
+    });
+  }
+
+  return {
+    ...returnRecord,
+    lineItems: lineItemsData
+  };
+};
+
+export const getNextReturnNumber = async () => {
+  const { data, error } = await supabase
+    .from('product_returns')
+    .select('return_number')
+    .order('created_at', { ascending: false })
+    .limit(1);
+  
+  if (error) throw error;
+
+  if (!data || data.length === 0) {
+    return 'RET-00001';
+  }
+
+  const lastNumber = data[0].return_number;
+  const match = lastNumber.match(/RET-(\d+)/);
+  
+  if (match) {
+    const nextNum = parseInt(match[1]) + 1;
+    return `RET-${String(nextNum).padStart(5, '0')}`;
+  }
+
+  return 'RET-00001';
 };

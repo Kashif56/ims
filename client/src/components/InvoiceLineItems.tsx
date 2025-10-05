@@ -7,6 +7,7 @@ interface InventoryItem {
   id: string;
   name: string;
   cost_price: number;
+  retail_price: number;
   stock_quantity: number;
 }
 
@@ -42,7 +43,7 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
       item_id: invItem.id,
       item_name: invItem.name,
       quantity: newItem.quantity,
-      sale_price: newItem.salePrice || invItem.cost_price * 1.2,
+      sale_price: newItem.salePrice || invItem.retail_price || invItem.cost_price * 1.2,
       cost_price: invItem.cost_price,
     };
     onAddItem(lineItem);
@@ -77,7 +78,7 @@ export default function InvoiceLineItems({ items, inventory, onAddItem, onUpdate
                     data-testid={`item-option-${item.id}`}
                   >
                     <div className="font-semibold">{item.name}</div>
-                    <div className="text-sm text-muted-foreground">Stock: {item.stock_quantity} • Cost: Rs. {item.cost_price.toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground">Stock: {item.stock_quantity} • Retail: Rs. {item.retail_price.toFixed(2)}</div>
                   </div>
                 ))}
               </div>

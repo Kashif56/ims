@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Receipt, Package, BarChart3, Eye, Users, TrendingUp, CreditCard, History } from 'lucide-react';
+import { Receipt, Package, BarChart3, Eye, Users, TrendingUp, CreditCard, RotateCcw } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface LayoutProps {
@@ -85,6 +85,15 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
                   Payments
+                </Button>
+              </Link>
+              <Link href="/returns">
+                <Button 
+                  variant={location === '/returns' ? 'default' : 'outline'} 
+                  size="sm"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Returns
                 </Button>
               </Link>
               <ThemeToggle />

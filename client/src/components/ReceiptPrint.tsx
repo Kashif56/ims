@@ -32,11 +32,11 @@ interface ReceiptPrintProps {
     address: string;
     contact: string;
   };
-  printFormat?: 'a4' | 'thermal';
+  printFormat?: 'thermal';
 }
 
 const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
-  ({ billNumber, date, customer, lineItems, totalSales, previousDue, cashPaid, balanceDue, companyInfo, printFormat = 'a4' }, ref) => {
+  ({ billNumber, date, customer, lineItems, totalSales, previousDue, cashPaid, balanceDue, companyInfo, printFormat = 'thermal' }, ref) => {
     const totalPayable = totalSales + previousDue;
     const currentDate = new Date();
     const formattedDate = currentDate.toLocaleDateString('en-US', { 
