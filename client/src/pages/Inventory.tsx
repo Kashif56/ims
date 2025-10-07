@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Search, PackagePlus, Pencil, Trash2, X } from 'lucide-react';
+import { Search, PackagePlus, Pencil, Trash2, X, Package, DollarSign } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import { createInventoryItem, updateInventoryItem, deleteInventoryItem } from '@/lib/supabaseService';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface InventoryItem {
   id: string;
@@ -36,6 +37,18 @@ export default function InventoryPage() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.sku.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Calculate inventory statistics
+  const inventoryStats = useMemo(() => {
+    const totalSKUs = inventory.length;
+    const totalValueAtCost = inventory.reduce((sum, item) => {
+      return sum + (item.cost_price * item.stock_quantity);
+    }, 0);
+    const totalValueAtRetail = inventory.reduce((sum, item) => {
+      return sum + (item.retail_price * item.stock_quantity);
+    }, 0);
+    return { totalSKUs, totalValueAtCost, totalValueAtRetail };
+  }, [inventory]);
 
   const handleSave = async () => {
     try {
@@ -102,6 +115,48 @@ export default function InventoryPage() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total SKUs</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{inventoryStats.totalSKUs}</div>
+              <p className="text-xs text-muted-foreground">
+                Unique products in inventory
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Inventory Value (Cost)</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rs. {inventoryStats.totalValueAtCost.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <p className="text-xs text-muted-foreground">
+                Total value at wholesale cost
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Inventory Value (Retail)</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rs. {inventoryStats.totalValueAtRetail.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <p className="text-xs text-muted-foreground">
+                Total value at retail price
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="p-6 border rounded-lg bg-card shadow-lg space-y-3">
             <h4 className="font-semibold text-lg">{editingId ? 'Update Item' : 'Add New Item'}</h4>

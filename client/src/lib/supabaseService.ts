@@ -230,6 +230,33 @@ export const createInvoice = async (
   
   if (lineItemsError) throw lineItemsError;
 
+  // Update inventory quantities - deduct sold items from stock
+  for (const item of lineItems) {
+    if (item.item_id) {
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('inventory_items')
+        .select('stock_quantity')
+        .eq('id', item.item_id)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error fetching inventory item:', fetchError);
+        continue; // Continue with other items even if one fails
+      }
+      
+      const newQuantity = currentItem.stock_quantity - item.quantity;
+      
+      const { error: updateError } = await supabase
+        .from('inventory_items')
+        .update({ stock_quantity: newQuantity })
+        .eq('id', item.item_id);
+      
+      if (updateError) {
+        console.error('Error updating inventory quantity:', updateError);
+      }
+    }
+  }
+
   return {
     ...invoiceData,
     lineItems: lineItemsData
@@ -350,6 +377,66 @@ export const getPaymentHistoryByCustomer = async (customerId: string, startDate?
   
   if (error) throw error;
   return data || [];
+};
+
+export const deletePaymentHistory = async (id: string) => {
+  const { error } = await supabase
+    .from('payment_history')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+};
+
+export const clearRefundPayment = async (paymentId: string) => {
+  // Get the payment details
+  const { data: payment, error: fetchError } = await supabase
+    .from('payment_history')
+    .select('*')
+    .eq('id', paymentId)
+    .single();
+  
+  if (fetchError) throw fetchError;
+  if (!payment) throw new Error('Payment not found');
+  
+  // Only allow clearing refunds (negative amounts)
+  if (payment.amount >= 0) {
+    throw new Error('Only refunds can be cleared');
+  }
+  
+  // Mark the payment as cleared
+  const { error: updateError } = await supabase
+    .from('payment_history')
+    .update({ 
+      cleared: true,
+      cleared_at: new Date().toISOString()
+    })
+    .eq('id', paymentId);
+  
+  if (updateError) throw updateError;
+  
+  // Adjust customer balance - add back the refund amount (reverse the refund)
+  if (payment.customer_id) {
+    const { data: customer, error: customerFetchError } = await supabase
+      .from('customers')
+      .select('current_due')
+      .eq('id', payment.customer_id)
+      .single();
+    
+    if (customerFetchError) throw customerFetchError;
+    
+    // Since payment.amount is negative, subtracting it adds to the due
+    const newDue = customer.current_due - payment.amount;
+    
+    const { error: customerUpdateError } = await supabase
+      .from('customers')
+      .update({ current_due: newDue })
+      .eq('id', payment.customer_id);
+    
+    if (customerUpdateError) throw customerUpdateError;
+  }
+  
+  return payment;
 };
 
 // Profit Analysis - Get all line items with profit calculation

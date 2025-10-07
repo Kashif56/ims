@@ -72,6 +72,8 @@ export interface PaymentHistory {
   amount: number;
   payment_type: 'invoice_payment' | 'partial_payment' | 'due_payment';
   notes?: string;
+  cleared?: boolean;
+  cleared_at?: string;
   created_at?: string;
 }
 

@@ -7,13 +7,15 @@ import ReturnReceiptPrint from '@/components/ReturnReceiptPrint';
 import { useState, useEffect } from 'react';
 import { getProductReturnById } from '@/lib/supabaseService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 export default function ViewReturnPage() {
   const [, params] = useRoute('/return/:id');
   const { companyInfo } = useAppContext();
   const { toast } = useToast();
-  const [printFormat, setPrintFormat] = useState<'a4' | 'thermal'>('a4');
+  const [printFormat, setPrintFormat] = useState('thermal');
   const [returnData, setReturnData] = useState<any>(null);
+  const [customerBalance, setCustomerBalance] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -24,6 +26,19 @@ export default function ViewReturnPage() {
         setLoading(true);
         const data = await getProductReturnById(params.id);
         setReturnData(data);
+        
+        // Fetch customer current balance if customer_id exists
+        if (data.customer_id) {
+          const { data: customer, error } = await supabase
+            .from('customers')
+            .select('current_due')
+            .eq('id', data.customer_id)
+            .single();
+          
+          if (!error && customer) {
+            setCustomerBalance(customer.current_due);
+          }
+        }
       } catch (error) {
         toast({
           title: "Error",
@@ -103,8 +118,9 @@ export default function ViewReturnPage() {
             lineItems={returnData.lineItems || []}
             refundAmount={returnData.refund_amount}
             notes={returnData.notes}
+            customerCurrentBalance={customerBalance}
             companyInfo={companyInfo}
-            printFormat={printFormat}
+
           />
         </div>
 
@@ -120,8 +136,9 @@ export default function ViewReturnPage() {
             lineItems={returnData.lineItems || []}
             refundAmount={returnData.refund_amount}
             notes={returnData.notes}
+            customerCurrentBalance={customerBalance}
             companyInfo={companyInfo}
-            printFormat={printFormat}
+    
           />
         </div>
       </div>

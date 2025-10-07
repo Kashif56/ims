@@ -19,6 +19,7 @@ interface ReturnReceiptPrintProps {
   lineItems: ReturnLineItem[];
   refundAmount: number;
   notes?: string;
+  customerCurrentBalance?: number;
   companyInfo: {
     name: string;
     address: string;
@@ -38,6 +39,7 @@ const ReturnReceiptPrint = forwardRef<HTMLDivElement, ReturnReceiptPrintProps>(
     lineItems, 
     refundAmount, 
     notes,
+    customerCurrentBalance,
     companyInfo, 
     printFormat = 'thermal' 
   }, ref) => {
@@ -148,6 +150,20 @@ const ReturnReceiptPrint = forwardRef<HTMLDivElement, ReturnReceiptPrintProps>(
                 </span>
               </div>
             </div>
+
+            {/* Customer Current Balance */}
+            {customerCurrentBalance !== undefined && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-gray-700">Customer Current Balance:</span>
+                  <span className={`text-lg font-bold ${
+                    customerCurrentBalance > 0 ? 'text-red-600' : customerCurrentBalance < 0 ? 'text-green-600' : 'text-gray-900'
+                  }`}>
+                    Rs. {Math.abs(customerCurrentBalance).toFixed(2)} {customerCurrentBalance > 0 ? '(Due)' : customerCurrentBalance < 0 ? '(Credit)' : ''}
+                  </span>
+                </div>
+              </div>
+            )}
 
            
 

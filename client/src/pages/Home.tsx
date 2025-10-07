@@ -290,10 +290,16 @@ export default function Home() {
                   onSelectCustomer={(customer) => setSelectedCustomer(customer as any)}
                   onCreateCustomer={handleCreateCustomer}
                 />
-                {selectedCustomer && previousDue > 0 && (
-                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm font-semibold text-amber-800">
-                      Previous Due: Rs. {previousDue.toFixed(2)}
+                {selectedCustomer && previousDue !== 0 && (
+                  <div className={`mt-3 p-3 rounded-lg ${
+                    previousDue > 0 
+                      ? 'bg-amber-50 border border-amber-200' 
+                      : 'bg-green-50 border border-green-200'
+                  }`}>
+                    <p className={`text-sm font-semibold ${
+                      previousDue > 0 ? 'text-amber-800' : 'text-green-800'
+                    }`}>
+                      {previousDue > 0 ? 'Previous Due' : 'Credit Balance'}: Rs. {Math.abs(previousDue).toFixed(2)}
                     </p>
                   </div>
                 )}
@@ -340,11 +346,19 @@ export default function Home() {
                     <span className="font-semibold text-lg">Rs. {totalSales.toFixed(2)}</span>
                   </div>
 
-                  {/* Previous Due */}
-                  {previousDue > 0 && (
+                  {/* Previous Due/Credit */}
+                  {previousDue !== 0 && (
                     <div className="flex justify-between items-center pb-3 border-b">
-                      <span className="text-sm text-amber-700">Previous Due</span>
-                      <span className="font-semibold text-lg text-amber-700">Rs. {previousDue.toFixed(2)}</span>
+                      <span className={`text-sm ${
+                        previousDue > 0 ? 'text-amber-700' : 'text-green-700'
+                      }`}>
+                        {previousDue > 0 ? 'Previous Due' : 'Credit Balance'}
+                      </span>
+                      <span className={`font-semibold text-lg ${
+                        previousDue > 0 ? 'text-amber-700' : 'text-green-700'
+                      }`}>
+                        {previousDue > 0 ? '+' : '-'} Rs. {Math.abs(previousDue).toFixed(2)}
+                      </span>
                     </div>
                   )}
 
