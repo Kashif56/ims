@@ -195,7 +195,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
 
             {/* Urdu Warranty Terms */}
             <div className="pt-2 mb-3 print:pt-1 print:mb-2">
-              <div className="urdu-text text-xs text-gray-800 space-y-1 leading-relaxed print:text-black">
+              <div className="urdu-text text-sm text-gray-800 space-y-1 leading-relaxed print:text-black">
                 <p>۱- موبائل فون بس کمپنی کی وارنٹی میں ہو گا وہی کمپنی ذمہ دار ہو گی دوکاندار نئی یا کلیم دینے کا پابند نہیں ہو گا۔</p>
                 <p>۲- استعمال شدہ چارجر، ہینڈ فری اور پھولی ہوئی بیٹری کی کوئی وارنٹی نہیں ہے۔</p>
                 <p>۳- خریدا ہوا مال واپس یا تبدیل نہیں ہو گا۔</p>
