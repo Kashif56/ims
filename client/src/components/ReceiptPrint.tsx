@@ -56,129 +56,161 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
         style={{ background: 'white', color: 'black' }}
         data-print-format={printFormat}
       >
-        <div className="max-w-2xl mx-auto" style={{ background: 'white' }}>
+        <style>
+          {`
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+            .urdu-text {
+              font-family: 'Noto Nastaliq Urdu', serif;
+              direction: rtl;
+              text-align: right;
+              line-height: 1.8;
+            }
+            @media print {
+              .urdu-text {
+                color: #000 !important;
+              }
+            }
+          `}
+        </style>
+        <div className="max-w-2xl mx-auto print:max-w-full" style={{ background: 'white' }}>
           {/* POS Receipt Style */}
-          <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg shadow-2xl p-8 print:border-solid print:shadow-none" style={{ background: 'white', color: 'black' }}>
+          <div className="bg-white rounded-lg shadow-2xl p-3 print:p-0 print:border-none print:shadow-none print:rounded-none" style={{ background: 'white', color: 'black' }}>
             {/* Header with Receipt Icon */}
-            <div className="text-center mb-6 pb-4 border-b-2 border-gray-300">
-
-              <h1 className="text-3xl font-black text-gray-900 mb-1 tracking-tight">
+            <div className="text-center mb-3 pb-2 border-b-2 border-gray-300 print:mb-2 print:pb-1">
+              <h1 className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
                 {companyInfo.name || 'POS SYSTEM'}
               </h1>
-              <p className="text-sm text-gray-600 font-medium flex items-center justify-center gap-1">
+              <p className="text-xs text-gray-600 font-medium">
                 {companyInfo.address || '123 Commerce Street'}
               </p>
-              <p className="text-sm text-gray-600 font-medium flex items-center justify-center gap-1">
+              <p className="text-xs text-gray-600 font-medium">
                 {companyInfo.contact || 'Ph: (555) 123-4567'}
               </p>
             </div>
 
             {/* Bill Number & Date */}
-            <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200 border-dashed">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-dark uppercase tracking-wide mb-1">
-                    <span className="text-gray-600 mr-2">Receipt#:</span>
-                    {billNumber}</p>
-          
-                  <p className="text-sm text-gray-900">
+            <div className="mb-3 bg-gray-50 rounded p-2 border border-gray-200 border-dashed print:mb-2 print:p-1 print:bg-transparent print:border-gray-900">
+              <div className="space-y-1">
+                <div className='flex justify-between items-center'>
+                  <p className="text-xs text-dark uppercase tracking-wide">
+                    <span className="text-gray-600 mr-2">INV#:</span>
+                    {billNumber}
+                  </p>
+                  <p className="text-xs text-gray-900">
                     <span className="text-gray-600 mr-2">Date:</span>
-                    {formattedDate} {formattedTime}</p>
-                  {customer && (
-                    <p className="text-sm text-gray-900">
-                      <span className="text-gray-600 mr-2">Customer:</span>
-                      {customer.name}
-                    </p>
-                  )}
+                    {formattedDate} {formattedTime}
+                  </p>
                 </div>
-               
+                {customer && (
+                  <p className="text-xs text-gray-900">
+                    <span className="text-gray-600 mr-2">Customer:</span>
+                    {customer.name}
+                  </p>
+                )}
               </div>
             </div>
 
 
-            {/* Items - Receipt Style */}
-            <div className="mb-6">
-              <div className="border-b-2 border-gray-900 pb-2 mb-3">
-                <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Items Purchased</p>
-              </div>
-              
-              <div className="space-y-3">
-                {lineItems.length > 0 ? (
-                  lineItems.map((item, index) => (
-                    <div key={item.id} className="border-b border-gray-300 pb-3">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="text-gray-900 flex-1 text-sm">
-                          <span className="text-gray-500 mr-2">{index + 1}.</span>
+            {/* Items - Table Format */}
+            <div className="mb-3 print:mb-2">
+              <table className="w-full text-xs border-collapse print:text-[9px]">
+                <thead>
+                  <tr className="border-b-2 border-gray-900">
+                    <th className="text-left py-1 font-bold text-gray-700 uppercase print:text-black print:py-0.5">Name</th>
+                    <th className="text-center py-1 font-bold text-gray-700 uppercase w-12 print:text-black print:py-0.5">Qty</th>
+                    <th className="text-right py-1 font-bold text-gray-700 uppercase w-16 print:text-black print:py-0.5">Price</th>
+                    <th className="text-right py-1 font-bold text-gray-700 uppercase w-20 print:text-black print:py-0.5">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.length > 0 ? (
+                    lineItems.map((item, index) => (
+                      <tr key={item.id} className="border-b border-gray-200 receipt-item">
+                        <td className="py-1 text-gray-900 break-words print:text-black print:py-0.5">
+                          <span className="text-gray-500 mr-1 print:text-black">{index + 1}.</span>
                           {item.item_name}
-                        </p>
-                      </div>
-                      <div className="flex justify-between items-center text-sm ml-5">
-                        <p className="text-gray-600 text-sm">
-                          {item.quantity} × Rs. {item.sale_price.toFixed(2)}
-                        </p>
-                        <p className="font-medium text-gray-900 text-lg">
-                          Rs. {(item.quantity * item.sale_price).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500 py-4">No items</p>
-                )}
-              </div>
+                        </td>
+                        <td className="py-1 text-center text-gray-600 print:text-black print:py-0.5">
+                          {item.quantity}
+                        </td>
+                        <td className="py-1 text-right text-gray-600 print:text-black print:py-0.5">
+                          Rs. {item.sale_price.toFixed(0)}
+                        </td>
+                        <td className="py-1 text-right font-semibold text-gray-900 print:text-black print:py-0.5">
+                          Rs. {(item.quantity * item.sale_price).toFixed(0)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="text-center text-gray-500 py-2">No items</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
 
             {/* Totals Section */}
-            <div className="border-t-2 border-gray-900 pt-4 mb-6">
-              <div className="space-y-2">
+            <div className="border-t-2 border-gray-900 pt-2 mb-3 print:pt-1 print:mb-2">
+              <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Subtotal:</span>
-                  <span className="font-semibold text-gray-900 text-sm">Rs. {totalSales.toFixed(2)}</span>
+                  <span className="text-xs text-gray-600 print:text-black">Subtotal:</span>
+                  <span className="font-semibold text-gray-900 text-xs print:text-black">Rs. {totalSales.toFixed(0)}</span>
                 </div>
                 
                 {previousDue > 0 && (
-                  <div className="flex justify-between items-center text-amber-700">
-                    <span className="text-sm">Previous Due:</span>
-                    <span className="font-semibold text-sm">Rs. {previousDue.toFixed(2)}</span>
+                  <div className="flex justify-between items-center text-amber-700 print:text-black">
+                    <span className="text-xs">Previous Due:</span>
+                    <span className="font-semibold text-xs">Rs. {previousDue.toFixed(0)}</span>
                   </div>
                 )}
                 
-                <div className="border-t border-gray-400 pt-2 mt-2">
+                <div className="border-t border-gray-400 pt-1 mt-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">TOTAL:</span>
-                    <span className="text-lg font-black text-gray-900">Rs. {totalPayable.toFixed(2)}</span>
+                    <span className="text-sm font-bold text-gray-900 print:text-black">TOTAL:</span>
+                    <span className="text-sm font-black text-gray-900 print:text-black">Rs. {totalPayable.toFixed(0)}</span>
                   </div>
                 </div>
 
-                <div className="bg-green-50 rounded-lg p-3 mt-3 border border-green-200">
+                <div className="rounded p-2 mt-2 border border-green-200 print:mt-0 print:p-0">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-semibold text-green-800">Cash Paid:</span>
-                    <span className="text-lg font-bold text-green-700">Rs. {cashPaid.toFixed(2)}</span>
+                    <span className="text-xs font-semibold text-green-800 print:text-black">Cash Paid:</span>
+                    <span className="text-sm font-bold text-green-700 print:text-black print:mt-0">Rs. {cashPaid.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-gray-700">Balance Due:</span>
-                    <span className={`text-lg font-bold ${balanceDue > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      Rs. {balanceDue.toFixed(2)}
+                    <span className="text-xs font-semibold text-gray-700 print:text-black">Balance Due:</span>
+                    <span className={`text-sm font-bold ${balanceDue > 0 ? 'text-red-600' : 'text-green-600'} print:text-black`}>
+                      Rs. {balanceDue.toFixed(0)}
                     </span>
                   </div>
                 </div>
 
                 {balanceDue === 0 && cashPaid > 0 && (
-                  <div className="text-center bg-green-100 text-green-800 font-bold py-2 rounded-lg mt-2">
+                  <div className="text-center bg-green-100 text-green-800 font-bold py-1 rounded text-xs mt-1 print:bg-gray-100 print:text-black">
                     ✓ FULLY PAID
                   </div>
                 )}
               </div>
             </div>
 
+            {/* Urdu Warranty Terms */}
+            <div className="pt-2 mb-3 print:pt-1 print:mb-2">
+              <div className="urdu-text text-xs text-gray-800 space-y-1 leading-relaxed print:text-black">
+                <p>۱- موبائل فون بس کمپنی کی وارنٹی میں ہو گا وہی کمپنی ذمہ دار ہو گی دوکاندار نئی یا کلیم دینے کا پابند نہیں ہو گا۔</p>
+                <p>۲- استعمال شدہ چارجر، ہینڈ فری اور پھولی ہوئی بیٹری کی کوئی وارنٹی نہیں ہے۔</p>
+                <p>۳- خریدا ہوا مال واپس یا تبدیل نہیں ہو گا۔</p>
+              </div>
+            </div>
+
             {/* Footer */}
-            <div className="text-center pt-4 border-t-2 border-gray-300">
-              <p className="text-sm font-semibold text-gray-900 mb-1">Thank You for Your Purchase!</p>
-              <p className="text-xs text-gray-600">Please visit again</p>
-              <div className="mt-4 pt-4 border-t border-gray-300">
-                <p className="text-xs text-gray-500">
-                  This is a computer-generated receipt
+            <div className="text-center print:mt-1">
+              <p className="text-xs font-semibold text-gray-900 mb-1 print:text-black print:mb-0.5">Thank You for Your Purchase!</p>
+              <p className="text-xs text-gray-600 print:text-black">Please visit again</p>
+              <div className="mt-2 pt-2 border-t border-gray-300 print:mt-1 print:pt-1">
+                <p className="text-xs text-gray-500 print:text-black">
+                  Powered by NinjaTech Solutions
                 </p>
+                <p className="text-xs text-blue-500 print:text-black">info.ninjatechsolutions@gmail.com</p>
               </div>
             </div>
           </div>
