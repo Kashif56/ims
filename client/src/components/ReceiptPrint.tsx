@@ -195,7 +195,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
 
             {/* Urdu Warranty Terms */}
             <div className="pt-2 mb-3 print:pt-1 print:mb-2">
-              <div className="urdu-text text-sm text-gray-800 space-y-1 leading-relaxed print:text-black">
+              <div className="urdu-text text-gray-800 space-y-1 leading-relaxed print:text-black">
                 <p>۱- موبائل فون بس کمپنی کی وارنٹی میں ہو گا وہی کمپنی ذمہ دار ہو گی دوکاندار نئی یا کلیم دینے کا پابند نہیں ہو گا۔</p>
                 <p>۲- استعمال شدہ چارجر، ہینڈ فری اور پھولی ہوئی بیٹری کی کوئی وارنٹی نہیں ہے۔</p>
                 <p>۳- خریدا ہوا مال واپس یا تبدیل نہیں ہو گا۔</p>
@@ -204,8 +204,7 @@ const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
 
             {/* Footer */}
             <div className="text-center print:mt-1">
-              <p className="text-xs font-semibold text-gray-900 mb-1 print:text-black print:mb-0.5">Thank You for Your Purchase!</p>
-              <p className="text-xs text-gray-600 print:text-black">Please visit again</p>
+              <p className="text-xs font-semibold text-gray-900 mb-1 print:text-black print:mb-0.5">Thank You for Your Purchase! Visit again</p>
               <div className="mt-2 pt-2 border-t border-gray-300 print:mt-1 print:pt-1">
                 <p className="text-xs text-gray-500 print:text-black">
                   Powered by NinjaTech Solutions
