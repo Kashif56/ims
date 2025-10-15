@@ -34,6 +34,8 @@ export default function ViewBillPage() {
   };
 
   const totalSales = bill.lineItems?.reduce((sum, item) => sum + (item.quantity * item.sale_price), 0) || 0;
+  const totalCost = bill.lineItems?.reduce((sum, item) => sum + (item.quantity * item.cost_price), 0) || 0;
+  const totalProfit = totalSales - totalCost;
   const previousDue = bill.total_amount - totalSales;
   const balanceDue = bill.remaining_due;
 
@@ -59,6 +61,18 @@ export default function ViewBillPage() {
               Back to Bills
             </Button>
           </Link>
+        </div>
+
+        {/* Admin Profit Display - Hidden on Print */}
+        <div className="mb-4 print:hidden bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+              Profit on this Bill
+            </span>
+            <span className="text-xl font-bold text-blue-700 dark:text-blue-400">
+              Rs. {totalProfit.toFixed(2)}
+            </span>
+          </div>
         </div>
 
         {/* Display Receipt on Screen - Non-printable version */}

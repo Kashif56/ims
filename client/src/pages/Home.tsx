@@ -50,7 +50,7 @@ export default function Home() {
   const [cashPaid, setCashPaid] = useState(0);
   const [billNumber, setBillNumber] = useState('INV-00001');
   const [saving, setSaving] = useState(false);
-  const [printFormat, setPrintFormat] = useState<'a4' | 'thermal'>('a4');
+  const [printFormat, setPrintFormat] = useState('thermal');
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -233,6 +233,18 @@ export default function Home() {
   const totalPayable = totalSales + previousDue;
   const balanceDue = totalPayable - cashPaid;
 
+  // Preload Urdu font for printing
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+    
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -345,6 +357,18 @@ export default function Home() {
                     <span className="text-sm text-muted-foreground">Subtotal</span>
                     <span className="font-semibold text-lg">Rs. {totalSales.toFixed(2)}</span>
                   </div>
+
+                  {/* Profit Display */}
+                  {lineItems.length > 0 && (
+                    <div className="flex justify-between items-center pb-3 border-b bg-blue-50 dark:bg-blue-950/20 rounded-lg px-3 py-2">
+                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                        Profit on this Bill
+                      </span>
+                      <span className="font-bold text-lg text-blue-700 dark:text-blue-400">
+                        Rs. {(totalSales - totalCost).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Previous Due/Credit */}
                   {previousDue !== 0 && (
@@ -481,7 +505,7 @@ export default function Home() {
         </div>
 
         {/* Hidden Receipt for Printing */}
-        <div className="hidden print:block">
+        <div className="print:block mt-2">
           <ReceiptPrint
             ref={receiptRef}
             billNumber={billNumber}
@@ -493,7 +517,6 @@ export default function Home() {
             cashPaid={cashPaid}
             balanceDue={balanceDue}
             companyInfo={companyInfo}
-            printFormat={printFormat}
           />
         </div>
       </div>
